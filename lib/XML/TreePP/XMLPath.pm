@@ -2,15 +2,15 @@
 
 =head1 NAME
 
-XML::TreePP::XMLPath - Some similar to XPath, allowing definition of paths to XML subtrees
+XML::TreePP::XMLPath - Something similar to XPath, allowing definition of paths to XML subtrees
 
 =head1 SYNOPSIS
 
-    use XML::TreePP::XMLPath;
     use XML::TreePP;
+    use XML::TreePP::XMLPath;
     
     my $tpp = XML::TreePP->new();
-    my $tppx = XML::TreePP->new();
+    my $tppx = XML::TreePP::XMLPath->new();
     
     my $tree = { rss => { channel => { item => [ {
         title   => "The Perl Directory",

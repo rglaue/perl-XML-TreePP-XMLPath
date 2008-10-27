@@ -7,11 +7,11 @@ subtree content. This may seem similar to XPath, but it is not XPath.
 
 EXAMPLE
 
-    use XML::TreePP::XMLPath;
     use XML::TreePP;
+    use XML::TreePP::XMLPath;
     
     my $tpp = XML::TreePP->new();
-    my $tppx = XML::TreePP->new();
+    my $tppx = XML::TreePP::XMLPath->new();
     
     my $tree = { rss => { channel => { item => [ {
         title   => "The Perl Directory",
