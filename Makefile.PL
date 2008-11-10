@@ -5,7 +5,9 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME              => 'XML::TreePP::XMLPath',
     VERSION_FROM      => 'lib/XML/TreePP/XMLPath.pm', # finds $VERSION
-    PREREQ_PM         => { XML::TreePP => 0.33 }, # e.g., Module::Name => 1.1
+    PREREQ_PM         => { XML::TreePP => 0.33,
+                           'Params::Validate'	=> '0', # or a minimum working version
+                         }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/XML/TreePP/XMLPath.pm', # retrieve abstract from module
        AUTHOR         => 'Russell E Glaue <rglaue@localdomain>') : ()),

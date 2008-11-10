@@ -189,7 +189,6 @@ use strict;
 use warnings;
 use Exporter;
 use Params::Validate qw(:all);
-use Pod::Usage;
 use XML::TreePP;
 
 BEGIN {
