@@ -201,7 +201,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION );
-    $VERSION    = '0.50';
+    $VERSION    = '0.51';
 }
 
 =pod

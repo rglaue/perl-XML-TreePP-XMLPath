@@ -1,4 +1,8 @@
 Revision history for Perl extension XML::TreePP::XMLPath.
 
+0.51    2008-11-10 reg
+        - Added Params::Validate dependency to Makefile to allow for
+          successful building
+
 0.50	2008-11-03 reg
 	- original version
