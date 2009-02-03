@@ -608,6 +608,7 @@ The subtree that is validated, or undef if not validated
 # array that are valid, you will need to pass each item in to this function
 # individualy for validating.
 #
+sub validateAttrValue ($$);
 sub validateAttrValue ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     validate_pos( @_, 1, 1);
@@ -740,6 +741,7 @@ sub getSubtree ($$) {
     my $subtree     = $tree;
 
 
+    sub _findsubtree($$);
     sub _findsubtree($$) {
         my $subtree     = shift;
         my $xmlpath     = shift;
@@ -834,7 +836,8 @@ Example Returned Data:
 #  XML Path points at a multi-same-name element
 #  [ {attr1A=>val,attr1B=>val}, {attr2A=>val,attr2B=val} ]
 #
-sub getAttributes ($$) {
+sub getAttributes (@);
+sub getAttributes (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     validate_pos( @_, 1, 0);
     my $tree        = shift;
@@ -918,7 +921,8 @@ If the XMLPath has no elements under it, then undef is returned instead.
 #
 # See also getAttributes function for further details of the return type
 #
-sub getElements ($$) {
+sub getElements (@);
+sub getElements (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     validate_pos( @_, 1, 0);
     my $tree        = shift;
