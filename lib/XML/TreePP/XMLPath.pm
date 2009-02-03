@@ -352,7 +352,6 @@ sub charlexsplit (@) {
                                     }
                              );
 
-    my %args            = @_;
     my $string          = $args{'string'};        # The string to parse
     my $boundry_start   = $args{'boundry_start'}; # The boundry character separating wanted elements
     my $boundry_stop    = $args{'boundry_stop'};  # The boundry character separating wanted elements
