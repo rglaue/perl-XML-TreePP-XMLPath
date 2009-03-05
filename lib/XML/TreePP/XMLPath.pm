@@ -184,7 +184,7 @@ resolved by XPath Query methods. However XMLPath is not XPath.
 
 package XML::TreePP::XMLPath;
 
-use 5.008008;
+use 5.008001;
 use strict;
 use warnings;
 use Exporter;
