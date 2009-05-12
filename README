@@ -24,12 +24,12 @@ EXAMPLE
 
 Get a subtree of the XMLTree:
 
-    my $xmlsub = $tppx->getSubTree( $xml , q{rss/channel/item[title="The Comprehensive Perl Archive Network"]} );
+    my $xmlsub = $tppx->filterXMLDoc( $xml , q{rss/channel/item[title="The Comprehensive Perl Archive Network"]} );
     print $xmlsub->{'link'};
 
 Iterate through all attributes and Elements of each <item> XML element:
 
-    my $xmlsub = $tppx->getSubTree( $xml , q{rss/channel/item} );
+    my $xmlsub = $tppx->filterXMLDoc( $xml , q{rss/channel/item} );
     my $h_attr = $tppx->getAttributes( $xmlsub );
     my $h_elem = $tppx->getElements( $xmlsub );
     foreach $attrHash ( @{ $h_attr } ) {
@@ -59,12 +59,11 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   XML::TreePP
-  Params::Validate
 
 
 COPYRIGHT AND LICENCE
 
-Copyright (c) 2008 Center for the Application of Information Technologies.
+Copyright (c) 2008-2009 Center for the Application of Information Technologies.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
