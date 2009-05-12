@@ -50,12 +50,11 @@ subtree content. This may seem similar to XPath, but it is not XPath.
 =head1 REQUIREMENTS
 
 The following perl modules are depended on by this module:
+( I<Note: Dependency on Params::Validate was removed in version 0.52> )
 
 =over 4
 
 =item *     XML::TreePP
-
-=item *     Params::Validate
 
 =back
 
@@ -65,6 +64,8 @@ When the calling application invokes this module in a use clause, the following
 methods can be imported into its space.
 
 =over 4
+
+=item *     filterXMLDoc
 
 =item *     getAttributes
 
@@ -78,7 +79,7 @@ methods can be imported into its space.
 
 Example:
 
-    use XML::TreePP::XMLPath qw(getAttributes getElements getSubtree parseXMLPath);
+    use XML::TreePP::XMLPath qw(parseXMLPath filterXMLDoc getAttributes getElements getSubtree);
 
 =head1 XMLPath PHILOSOPHY
 
@@ -95,17 +96,29 @@ Referring to the following XML Data.
         </sentence>
     </paragraph>
 
-Where the path "C<parapgraph/sentence[@language=english]/words>" matches
-"C<Do red cats eat yellow food>"
+Where the path "C<paragraph/sentence[@language=english]/words>" has two matches:
+"C<Do red cats eat yellow food>" and "C<Brown cows eat green grass>".
 
-And the path "C<parapgraph/sentence[punctuation=.]/words>" matches 
+Where the path "C<paragraph/sentence[@language]>" has the same previous two
+matches.
+
+Where the path "C<paragraph/sentence[2][@language=english]/words>" has one
+match: "C<Brown cows eat green grass>".
+
+And where the path "C<paragraph/sentence[punctuation=.]/words>" matches 
 "C<Brown cows eat green grass>"
 
-So that "C<@attr=val>" is identified as an attribute inside the
-"<tag attr=val></tag>"
+So that "C<[@attr=val]>" is identified as an attribute inside the
+"<tag attr='val'></tag>"
 
-And "C<attr=val>" is identified as a nested attribute inside the
+And "C<[attr=val]>" is identified as a nested attribute inside the
 "<tag><attr>val</attr></tag>"
+
+And "C<[2]>" is a positional argument identifying the second node in a list
+"<tag><attr>value-1</attr><attr>value-2</attr></tag>".
+
+And "C<@attr>" identifies all nodes containing the C<@attr> attribute.
+"<tag><item attr="value-A">value-1</item><item attr="value-B">value-2</item></tag>".
 
 After XML::TreePP parses the above XML, it looks like this:
 
@@ -129,22 +142,26 @@ After XML::TreePP parses the above XML, it looks like this:
 B<Things To Note>
 
 Note that attributes are specified in the XMLPath as C<@attribute_name>, but
-after XML::TreePP parses the XML Document, the attribute name is identifed as
-C<-attribute_name> in the resulting parsed document.
+after C<XML::TreePP::parse()> parses the XML Document, the attribute name is
+identifed as C<-attribute_name> in the resulting parsed document.
+As of version 0.52 this can be changed using the C<set(attr_prefix=>'@')>
+method. It should only be changed if the XML Docuement is provided as already
+parsed, and the attributes are represented with a value other than the default.
+This document uses the default value of C<-> in its examples.
 
 XMLPath requires attributes to be specified as C<@attribute_name> and takes care
 of the conversion from C<@> to C<-> behind the scenes when accessing the
 XML::TreePP parsed XML document.
 
-Child elements on the next level of a parent element are accessible as attributes
-as C<attribute_name>. This is the same format as C<@attribute_name> except
-without the C<@> symbol. Specifying the attribute without an C<@> symbol
+Child elements on the next level of a parent element are accessible as
+attributes as C<attribute_name>. This is the same format as C<@attribute_name>
+except without the C<@> symbol. Specifying the attribute without an C<@> symbol
 identifies the attribute as a child element of the parent element being
 evaluated.
 
 Child element values are only accessible as C<CDATA>. That is when the
 element being evaluated is C<animal>, the attribute (or child element) is
-C<cat>, and the value of the attribue is C<tiger>, it is presented as this:
+C<cat>, and the value of the attribute is C<tiger>, it is presented as this:
 
     <jungle>
         <animal>
@@ -153,12 +170,11 @@ C<cat>, and the value of the attribue is C<tiger>, it is presented as this:
     </jungle>
 
 The XMLPath used to access the key=value pair of C<cat=tiger> for element
-animal would be as follows:
+C<animal> would be as follows:
 
-    jungle/animal[cat=tiger]
+    jungle/animal[cat='tiger']
 
-However, note that in this case, due to how XML::TreePP parses the XML document,
-the above XMLPath is invalid:
+And in version 0.52, in this second case, the above XMLPath is still valid:
 
     <jungle>
         <animal>
@@ -166,17 +182,48 @@ the above XMLPath is invalid:
         </animal>
     </jungle>
 
-However, in this case, the following two XMLPaths would be valid:
+In version 0.52, the period (.) is supported as it is in XPath to represent
+the current context node. As such, the following XMLPaths would also be valid:
 
-    jungle/animal/cat[#text=tiger]
-    jungle/animal/cat[@color="black"][#text=tiger]
+    jungle/animal/cat[.='tiger']
+    jungle/animal/cat[@color='black'][.='tiger']
 
-One should realize that in the second case, the element C<cat> is being
-evaluated, and not the element C<animal> as in the first case. And will be
-undesireable if you want to evaluate C<animal>.
+One should realize that in these previous two XMLPaths, the element C<cat> is
+being evaluated, and not the element C<animal> as in the first case. And will
+be undesireable if you want to evaluate C<animal> for results.
 
-As such, this is a current limitation to XMLPath. This limitation would be
-resolved by XPath Query methods. However XMLPath is not XPath.
+To perform the same evaluation, but return the matching C<animal> node, the
+following XMLPath can be used:
+
+    jungle/animal[cat='tiger']
+
+To evaluate C<animal> and C<cat>, but return the matching C<cat> node, the
+following XMLPaths can be used:
+
+    jungle/animal[cat='tiger']/cat
+    jungle/animal/cat[.='tiger']
+
+The first path analizes C<animal>, and the second path analizes C<cat>. But
+both matches the same node "<cat color='black>tiger</cat>".
+
+B<Matching attributes>
+
+Prior to version 0.52, attributes could only be used in XMLPath to evaluate
+an element for a result set.
+As of version 0.52, attributes can now be matched in XMLPath to return their
+values.
+
+This next example illustrates:
+
+    <jungle>
+        <animal>
+            <cat color="black">tiger</cat>
+        </animal>
+    </jungle>
+    
+    /jungle/animal/cat[.='tiger']/@color
+
+The result set of this XMLPath would be "C<black>".
 
 =head1 METHODS
 
@@ -184,25 +231,194 @@ resolved by XPath Query methods. However XMLPath is not XPath.
 
 package XML::TreePP::XMLPath;
 
-use 5.008001;
+use 5.000;
 use strict;
 use warnings;
 use Exporter;
-use Params::Validate qw(:all);
+#use Params::Validate qw(:all);
 use XML::TreePP;
+use Data::Dump qw(pp);
 
 BEGIN {
     use vars      qw(@ISA @EXPORT @EXPORT_OK);
     @ISA        = qw(Exporter);
     @EXPORT     = qw();
-    @EXPORT_OK  = qw(&charlexsplit &getAttributes &getElements &getSubtree &parseXMLPath);
+    @EXPORT_OK  = qw(&charlexsplit &getAttributes &getElements &getSubtree &parseXMLPath &filterXMLDoc);
 
     use vars      qw($REF_NAME);
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
-    use vars      qw( $VERSION );
+    use vars      qw( $VERSION $DEBUG $TPPKEYS );
     $VERSION    = '0.52';
+    $DEBUG      = 0;
+    $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 }
+
+
+=pod
+
+=head2 tpp
+
+This module is an extension of the XML::TreePP module. As such, it uses the
+module in many different methods to parse XML Docuements, and when the user
+calls the C<set()> and C<get()> methods to set and get properties specific to
+the module.
+
+The XML::TreePP module, however, is only loaded into XML::TreePP::XMLPath when
+it becomes necessary to perform the previously described requests.
+
+To avoid having this module load the XML::TreePP module, the caller must be
+sure to avoid the following:
+
+1. Do not call the C<set()> and C<get()> methods to set or get properties
+specific to XML::TreePP. Doing so will cause this module to load XML::TreePP in
+order to set or get those properties. In turn, that loaded instance of 
+XML::TreePP is used internally when needed in the future.
+
+2. Do not pass in unparsed XML Documents. The caller would instead want to
+parse the XML Document with C<XML::TreePP::parse()> before passing it in.
+Passing in an unparsed XML document causes this module to load C<XML::TreePP>
+in order to parse it for processing.
+
+Alternaltely, If the caller has loaded a copy of XML::TreePP, that instance
+can be assigned to be used by the instance of this module using this method.
+In doing so, when XML::TreePP is needed, the instance provided is used instead
+of loading another copy.
+
+Additionally, if this module has loaded an instance of XML::TreePP, this
+instance can be directly accessed or retrieved through this method.
+
+If you want to only get the internally loaded instance of XML::TreePP, but want
+to not load a new instance and instead have undef returned if an instance is not
+already loaded, then use the C<get()> method.
+
+    my $tppobj = $tppx->get( 'tpp' );
+    warn "XML::TreePP is not loaded in XML::TreePP::XMLPath.\n" if !defined $tppobj;
+
+This method was added in version 0.52
+
+=over 4
+
+=item * C<XML::TreePP>
+
+An instance of XML::TreePP that this object should use instead of, when needed,
+loading its own copy. If not provided, the currently loaded instance is
+returned. If an instance is not loaded, an instance is loaded and then returned.
+
+=item * I<returns>
+
+Returns the result of setting an instance of XML::TreePP in this object.
+Or returns the internally loaded instance of XML::TreePP.
+Or loads a new instance of XML::TreePP and returns it.
+
+=back
+
+    $tppx->tpp( new XML::TreePP );  # Sets the XML::TreePP instance to be used by this object
+    $tppx->tpp();  # Retrieve the currently loaded XML::TreePP instance
+
+=cut
+
+sub tpp(@) {
+    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    if (!defined $self) {
+        return new XML::TreePP;
+    } else {
+        return $self->{'tpp'} = shift if @_ >= 1 && ref($_[0]) eq "XML::TreePP";
+        return $self->{'tpp'} if defined $self->{'tpp'} && ref($self->{'tpp'}) eq "XML::TreePP";
+        $self->{'tpp'} = new XML::TreePP;
+        return $self->{'tpp'};
+    }
+}
+
+
+=pod
+
+=head2 set
+
+Set the value for a property in this object instance.
+This method can only be accessed in object oriented style.
+
+This method was added in version 0.52
+
+=over 4
+
+=item * C<propertyname>
+
+The property to set the value for.
+
+=item * C<propertyvalue>
+
+The value of the property to set.
+If no value is given, the property is deleted.
+
+=item * I<returns>
+
+Returns the result of setting the value of the property, or the result of
+deleting the property.
+
+=back
+
+    $tppx->set( 'attr_prefix' );  # deletes the property attr_prefix
+    $tppx->set( 'attr_prefix' => '@' );  # sets the value of attr_prefix
+
+=cut
+
+sub set(@) {
+    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    my %args    = @_;
+    while (my ($key,$val) = each %args) {
+        if (($key =~ $TPPKEYS) && (defined $self)) {
+            # define it in XML::TreePP
+            $self->tpp->set( $key => $val );
+        } else {
+            if ( defined $val ) {
+                $self->{$key} = $val;
+            }
+            else {
+                delete $self->{$key};
+            }
+        }
+    }
+}
+
+
+=pod
+
+=head2 get
+
+Retrieve the value set for a property in this object instance.
+This method can only be accessed in object oriented style.
+
+This method was added in version 0.52
+
+=over 4
+
+=item * C<propertyname>
+
+The property to get the value for
+
+=item * I<returns>
+
+Returns the value of the property requested
+
+=back
+
+    $tppx->get( 'attr_prefix' );
+
+=cut
+
+sub get(@) {
+    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    my $key     = shift;
+    if (($key =~ $TPPKEYS) && (defined $self)) {
+        # get it from XML::TreePP
+        $self->tpp->get( $key );
+    } else {
+        return $self->{$key} if exists $self->{$key};
+        return undef;
+    }
+}
+
 
 =pod
 
@@ -343,14 +559,21 @@ An arrary reference of elements
 #
 sub charlexsplit (@) {
     my $self            = shift if ref($_[0]) eq $REF_NAME || undef;
-    my %args    =   validate ( @_,  {   string          => { type => SCALAR,   optional => 0 },
-                                        boundry_start   => { type => SCALAR,   optional => 0 },
-                                        boundry_stop    => { type => SCALAR,   optional => 0 },
-                                        tokens          => { type => ARRAYREF, optional => 0 },
-                                        boundry_begin   => { type => SCALAR,   optional => 1 },
-                                        boundry_end     => { type => SCALAR,   optional => 1 }
-                                    }
-                             );
+    my %args            = @_;
+    my @warns;
+    push(@warns,'string')           if !exists $args{'string'};
+    push(@warns,'boundry_start')    if !exists $args{'boundry_start'};
+    push(@warns,'boundry_stop')     if !exists $args{'boundry_stop'};
+    push(@warns,'tokens')           if !exists $args{'tokens'};
+    if (@warns) { warn ('method charlexsplit(@) requires the arguments: '.join(', ',@warns).'.'); return undef; }
+    #my %args    =   validate ( @_,  {   string          => { type => SCALAR,   optional => 0 },
+    #                                    boundry_start   => { type => SCALAR,   optional => 0 },
+    #                                    boundry_stop    => { type => SCALAR,   optional => 0 },
+    #                                    tokens          => { type => ARRAYREF, optional => 0 },
+    #                                    boundry_begin   => { type => SCALAR,   optional => 1 },
+    #                                    boundry_end     => { type => SCALAR,   optional => 1 }
+    #                                }
+    #                         );
 
     my $string          = $args{'string'};        # The string to parse
     my $boundry_start   = $args{'boundry_start'}; # The boundry character separating wanted elements
@@ -420,12 +643,52 @@ sub charlexsplit (@) {
     return undef;
 }
 
+
 =pod
 
 =head2 parseXMLPath
 
-Parse a string that represents the path to a XML element in a XML document
-The XML Path is something like XPath, but it is not
+Parse a string that represents the path to a XML element or attribute in a XML
+document. The XML Path is something like XPath, and attempts to conform to the
+XPath standard, but it is far from being fully XPath compliant.
+XML::TreePP::XMLPath intends to be a method for accessing XML::TreePP parsed
+nodes.
+
+Note that the XML attributes, known as "@attr" are transformed into "-attr".
+The preceeding (-) minus in place of the (@) at is the recognized format of
+attributes in the XML::TreePP module.
+
+Being that this is intended to be a submodule of XML::TreePP, the format of 
+'@attr' is converted to '-attr' to conform with how XML::TreePP handles
+attributes.
+
+See: XML::TreePP->set( attr_prefix => '@' ); for more information.
+This module supports the default format, '-attr', of attributes. But as of
+version 0.52 this can be changed by setting this modules 'attr_prefix' property
+using the C<set()> method in object oriented programming.
+Example:
+
+    my $tppx = new XML::TreePP::XMLPath();
+    $tppx->set( attr_prefix => '@' );
+
+B<XMLPath Filter by index and existance>
+Also, as of version 0.52, there are two additional types of XMLPaths understood.
+
+I<XMLPath with indexes, which is similar to the way XPath does it>
+
+    $path = '/books/book[5]';
+
+This defines the fith book in a list of book elements under the books root.
+When using this to get the value, the 5th book is returned.
+When using this to test an element, there must be 5 or more books to return true.
+
+I<XMLPath by existance, which is similar to the way XPath does it>
+
+    $path = '/books/book[author]';
+
+This XMLPath represents all book elements under the books root which have 1 or
+more author child element. It does not evaluate if the element or attribute to
+evaluate has a value. So it is a test for existance of the element or attribute.
 
 =over 4
 
@@ -435,17 +698,7 @@ The XML path to be parsed.
 
 =item * I<returns>
 
-An arrary reference of hash reference elements of the XMLPath.
-Note that the XML attributes, known as "@attr" are transformed into "-attr".
-The preceeding "-" minus in place of the "@" at is the recognized format of
-attributes in the XML::TreePP module.
-
-Being that this is intended to be a submodule of XML::TreePP, the format of 
-'@attr' is converted to '-attr' to conform with how XML::TreePP handles
-attributes.
-
-See: XML::TreePP->set( attr_prefix => '@' ); for more information.
-This module only supports the default format, '-attr', of attributes at this time.
+An arrary reference of array referenced elements of the XMLPath.
 
 =back
 
@@ -486,8 +739,9 @@ This module only supports the default format, '-attr', of attributes at this tim
 #         <punctuation>.</punctuation>
 #     </sentence>
 # <paragraph>
-# Where the path 'parapgraph/sentence[@language=english]/words' matches 'Do red cats eat yellow food'
-# And the path 'parapgraph/sentence[punctuation=.]/words' matches 'Brown cows eat green grass'
+# Where the path 'paragraph/sentence[@language=english]/words' matches 'Do red cats eat yellow food'
+# (Note this is because it is the first element of a multi element match)
+# And the path 'paragraph/sentence[punctuation=.]/words' matches 'Brown cows eat green grass'
 # So that '@attr=val' is identified as an attribute inside the <tag attr=val></tag>
 # And 'attr=val' is identified as a nested attribute inside the <tag><attr>val</attr></tag>
 #
@@ -495,9 +749,20 @@ This module only supports the default format, '-attr', of attributes at this tim
 #
 sub parseXMLPath ($) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    validate_pos( @_, 1);
+    if (@_ != 1) { warn 'method parseXMLPath($) requires one argument.'; return undef; }
+    #validate_pos( @_, 1);
     my $path        = shift;
     my $hpath       = [];
+    my ($tpp,$xml_text_id,$xml_attr_id);
+
+    if ((defined $self) && (defined $self->get('tpp'))) {
+        $tpp         = $self ? $self->tpp() : tpp();
+        $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+        $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+    } else {
+        $xml_text_id = '#text';
+        $xml_attr_id = '-';
+    }
 
     my $h_el = charlexsplit   (
         string        => $path,
@@ -508,6 +773,8 @@ sub parseXMLPath ($) {
         boundry_end   => 1
         );
     foreach my $el (@{$h_el}) {
+        # See: XML::TreePP->set( attr_prefix => '@' );, where default is '-'
+        $el =~ s/^\@/$xml_attr_id/;
         my $h_param = charlexsplit (
             string        => $el,
             boundry_start => '[',
@@ -520,7 +787,11 @@ sub parseXMLPath ($) {
             my ($el2) = $el =~ /^([^\[]*)/;
             my $ha_param = [];
             foreach my $param (@{$h_param}) {
-                my ($attr,$val) = $param =~ /([^\=]*)\=[\'\"]?(.*[^\'\"])[\'\"]?/;
+                my ($attr,$val);
+                #
+                # define string values here
+                # defined first, as string is recognized as the default
+                ($attr,$val) = $param =~ /([^\=]*)\=[\'\"]?(.*[^\'\"])[\'\"]?/;
                 if ((! defined $attr) && (! defined $val)) {
                     ($attr) = $param =~ /([^\=]*)\=[\'\"]?[\'\"]?/;
                     $val = '';
@@ -529,7 +800,24 @@ sub parseXMLPath ($) {
                     ($attr) = $param =~ /^([^\=]*)$/;
                     $val = undef;
                 }
-                $attr =~ s/^\@/\-/;  # See: XML::TreePP->set( attr_prefix => '@' );, where default is '-'
+                #
+                # define literal values here, which are not string-values
+                # defined second, as literals are strictly defined
+                if ($param =~ /^(\d*)$/) {
+                    # It is a positional argument, ex: /books/book[3]
+                    $attr = $1;
+                    $val  = undef;
+                } elsif ($param =~ /^([^\=]*)$/) {
+                    # Only the element/attribute is defined, ex: /path[@attr]
+                    $attr = $1;
+                    $val  = undef;
+                }
+                #
+                # Internal - convert the attribute identifier
+                # See: XML::TreePP->set( attr_prefix => '@' );, where default is '-'
+                $attr =~ s/^\@/$xml_attr_id/;
+                #
+                # push the result
                 push (@{$ha_param},[$attr, $val]);
             }
             push (@{$hpath},[$el2, $ha_param]);
@@ -541,12 +829,411 @@ sub parseXMLPath ($) {
     return $hpath;
 }
 
+
+=pod
+
+=head2 filterXMLDoc
+
+To filter down to a subtree or set of subtrees of an XML document based on a
+given XMLPath
+
+This method can also be used to determine if a node within an XML tree is valid
+based on the given filters in an XML path.
+
+This method replaces the two methods C<getSubtree()> and C<validateAttrValue()>.
+
+This method was added in version 0.52
+
+=over 4
+
+=item * C<XMLDocument>
+
+The XML document tree, or subtree node to validate.
+This is an XML document either given as plain text string, or as parsed by the
+C<XML::TreePP->parse()> method.
+
+The XMLDocument, when parsed, can be an ARRAY of multiple elements to evaluate,
+which would be validated as follows:
+
+    # when path is: context[@attribute]
+    # returning: $subtree[item] if valid (returns all validated [item])
+    $subtree[item]->{'-attribute'} exists
+    # when path is: context[@attribute="value"]
+    # returning: $subtree[item] if valid (returns all validated [item])
+    $subtree[item]->{'-attribute'} eq "value"
+    $subtree[item]->{'-attribute'}->{'value'} exists
+    # when path is: context[5]
+    # returning: $subtree[5] if exists (returns the fifth item if validated)
+    $subtree['itemnumber']
+    # when path is: context[5][element="value"]
+    # returning: $subtree[5] if exists (returns the fifth item if validated)
+    $subtree['itemnumber']->{'element'} eq "value"
+    $subtree['itemnumber']->{'element'}->{'value'} exists
+
+Or the XMLDocument can be a HASH which would be a single element to evaluate.
+The XMLSubTree would be validated as follows:
+
+    # when path is: context[element]
+    # returning: $subtree if validated
+    $subtree{'element'} exists
+    # when path is: context[@attribute]
+    # returning: $subtree if validated
+    $subtree{'-attribute'} eq "value"
+    $subtree{'-attribute'}->{'value'} exists
+
+=item * C<XMLPath>
+
+The path within the XML Tree to retrieve. See C<parseXMLPath()>
+
+=item * I<returns>
+
+The parsed XML Document subtrees that are validated, or undef if not validated
+
+You can retrieve the result set in one of two formats.
+
+    # Option 1 - An ARRAY reference to a list
+    my $result = filterXMLDoc( $xmldoc, '/books' );
+    # $result is:
+    # [ { book => { title => "PERL", subject => "programming" } },
+    #   { book => { title => "All About Backpacks", subject => "hiking" } } ]
+    
+    # Option 2 - A list, or normal array
+    my @result = filterXMLDoc( $xmldoc, '/books/book[subject="camping"]' );
+    # $result is:
+    # ( { title => "campfires", subject => "camping" },
+    #   { title => "tents", subject => "camping" } )
+
+=back
+
+    my $result = filterXMLDoc( $XMLDocument , $XMLPath );
+    my @result = filterXMLDoc( $XMLDocument , $XMLPath );
+
+=cut
+
+sub filterXMLDoc ($$) {
+    my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
+    if (@_ != 2) { warn 'method filterXMLDoc($$) requires two arguments.'; return undef; }
+    #validate_pos( @_, 1, 1);
+    my $tree        = shift;
+    my $path        = shift;
+    my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id);
+
+    if (ref $tree) { $xtree       = $tree;
+                     $xml_text_id = '#text';
+                     $xml_attr_id = '-';
+                   }
+              else { $tpp         = $self ? $self->tpp() : tpp();
+                     $xtree       = $tpp->parse($tree);
+                     $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+                     $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+                   }
+    if (ref $path) { $xpath       = $path;
+                   }
+              else { $xpath       = parseXMLPath($path);
+                   }
+
+    # This is used on the lowest level of an element, and is the
+    # execution of our rules for matching or validating a value
+    my $validateFilter = sub (@) {
+        my %args            = @_;
+        print ("="x8,"sub:filterXMLDoc|validateFilter->()\n") if $DEBUG;
+        print (" "x8,"= attempting to validate filter, with: ", pp(\%args) ,"\n") if $DEBUG;
+        # we accept:
+        # - required: node,param,comparevalue ; optional: operand(=) (= is default)
+        # not accepted: - required: node,param,operand(exists)
+        return 0 if !exists $args{'node'} || !exists $args{'comparevalue'};
+        # Node possibilities this method is expecting to see:
+        # VALUE: 'Henry'                        -asin-> { people => { person => 'Henry' } }
+        # VALUE: [ 'Henry', 'Sally' ]           -asin-> { people => { person => [ 'Henry', 'Sally' ] } }
+        # VALUE: { id => 45, #text => 'Henry' } -asin-> { people => { person => { id => 45, #text => 'Henry' } } }
+        # Also, comparevalue could be '', an empty string
+        # comparevalue of undef is attempted to be matched here, because operand defaults to "eq" or "="
+        if (ref $args{'node'} eq "HASH") {
+            if (exists $args{'node'}->{$xml_text_id}) {
+                return 1 if defined $args{'node'}->{$xml_text_id} && defined $args{'comparevalue'} && $args{'node'}->{$xml_text_id} eq "" && $args{'comparevalue'} eq "";
+                return 1 if !defined $args{'node'}->{$xml_text_id} && !defined $args{'comparevalue'};
+                return 1 if $args{'node'}->{$xml_text_id} eq $args{'comparevalue'};
+            }
+        } elsif (ref $args{'node'} eq "ARRAY") {
+            foreach my $value (@{$args{'node'}}) {
+                if (ref $value eq "HASH") {
+                    if (exists $value->{$xml_text_id}) {
+                        return 1 if defined $value->{$xml_text_id} && defined $args{'comparevalue'} && $value->{$xml_text_id} eq "" && $args{'comparevalue'} eq "";
+                        return 1 if !defined $value->{$xml_text_id} && !defined $args{'comparevalue'};
+                        return 1 if $value->{$xml_text_id} eq $args{'comparevalue'};
+                    }
+                } else {
+                    return 1 if defined $value && defined $args{'comparevalue'} && $value eq "" && $args{'comparevalue'} eq "";
+                    return 1 if !defined $value && !defined $args{'comparevalue'};
+                    return 1 if $value eq $args{'comparevalue'};
+                }
+            }
+        } elsif (ref $args{'node'} eq "SCALAR") { # not likely -asin-> { people => { person => \$value } }
+            return 1 if defined ${$args{'node'}} && defined $args{'comparevalue'} && ${$args{'node'}} eq "" && $args{'comparevalue'} eq "";
+            return 1 if !defined ${$args{'node'}} && !defined $args{'comparevalue'};
+            return 1 if ${$args{'node'}} eq $args{'comparevalue'};
+        } else {  # $node =~ /\w/
+            return 1 if defined $args{'node'} && defined $args{'comparevalue'} && $args{'node'} eq "" && $args{'comparevalue'} eq "";
+            return 1 if !defined $args{'node'} && !defined $args{'comparevalue'};
+            return 1 if $args{'node'} eq $args{'comparevalue'};
+        }
+        return 0;
+    }; #end validateFilter->();
+
+    # So what do we support as filters
+    # /books/book[@id="value"]      # attribute eq value
+    # /books/book[title="value"]    # element eq value
+    # /books/book[@type]            # Attribute exists
+    # /books/book[author]           # element exists
+    # Not yet: /books/book[publisher/address/city="value"]   # sub/child element eq value
+    # And what are some of the things we do not support
+    # /books/book[publisher/address[country="US"]/city="value"]   # sub/child element eq value based on another filter
+    # /books/book[5][./title=../book[4]/title]  # comparing the values of two elements
+    my $processFilters = sub ($$) {
+        print ("="x8,"sub:filterXMLDoc|processFilters->()\n") if $DEBUG;
+        my $xmltree_child           = shift;
+        my $filters                 = shift;
+        my $filters_processed_count = 0; # Will catch a filters error of [[][][]] or something
+        my $param_match_flag        = 0;
+        FILTER: foreach my $filter (@{$filters}) {
+            next if !defined $filter; # if we get empty filters;
+            $filters_processed_count++;
+
+            my $param = $filter->[0];
+            my $value = $filter->[1];
+            print (" "x8,"= processing filter: " . $param) if $DEBUG;
+            print (" , " . $value) if defined $value && $DEBUG;
+            print ("\n") if $DEBUG;
+
+            # attribute/element exists filter
+            if (($param ne ".") && (! exists $xmltree_child->{$param})) {
+                $param_match_flag = 0;
+                last FILTER;
+            } elsif ((($param eq ".") || (exists $xmltree_child->{$param})) && (! defined $value)) {
+                # NOTE, maybe filter needs to be [['attr'],['attr','val']] for this one
+                $param_match_flag = 1;
+                next FILTER;
+            }
+
+            print (" "x12,"= about to validate filter.\n") if $DEBUG;
+            if (     ($param ne ".") &&
+                     ($validateFilter->( node => $xmltree_child->{$param},
+                                      operand => '=',
+                                 comparevalue => $value))
+                ) {
+                print (" "x12,"= validated filter.\n") if $DEBUG;
+                $param_match_flag = 1;
+                next FILTER;
+            } elsif (($param eq ".") &&
+                     ($validateFilter->( node => $xmltree_child,
+                                      operand => '=',
+                                 comparevalue => $value))
+                ) {
+                print (" "x12,"= validated filter.\n") if $DEBUG;
+                $param_match_flag = 1;
+                next FILTER;
+            } else {
+                print (" "x12,"= unvalidated filter.\n") if $DEBUG;
+                $param_match_flag = 0;
+                last FILTER;
+            }
+
+            # Examples of what $xmltree_child->{$param} can be
+            # (Perhaps this info should be bundled with $validateFilter->() method)
+            # 1. A SCALAR ref will probably never occur
+            # 2a. An ARRAY ref of strings
+            #    PATH: /people[person='Henry']
+            #    XML: <people><person>Henry</person><person>Sally</person></people>
+            #    PARSED: { people => { person => [ 'Henry', 'Sally' ] } }
+            # 2b. or ARRAY ref or HASH refs
+            #    XML: <people><person id='1'>Henry</person><person id='2'>Sally</person></people>
+            #    PARSED: { people => { person => [ { id => 1, #text => 'Henry' }, { id => 2, #text => 'Sally' } ] } }
+            # 3. A HASH when in cases like this:
+            #    PATH: /people/person[@id=45]
+            #    XML: <people><person id="45">Henry</person></people>
+            #    PARSED: { people => { person => { id => 45, #text => 'Henry' } } }
+            # 4. The most likely encounter of plain old text/string values
+            #    PATH: /people/person
+            #    XML: <people><person>Henry</person></people>
+            #    PARSED: { people => { person => 'Henry' } }
+
+        } #end FILTER
+        if ($filters_processed_count == 0) {
+            # there was some unusal error which caused a lot of undef filters
+            # And as such, $param_match_flag will be 0
+            # we return the entire tree as valid
+            return $xmltree_child;
+        } elsif ($param_match_flag == 0) {
+            # filters were processed, but there was no matches
+            # we return undef because nothing validated
+            return undef;
+        } else {
+            return $xmltree_child;
+        }
+    }; #end processFilters->()
+
+    my $find = sub (@) {};
+    $find = sub (@) {
+        my $xmltree         = shift;  # The parsed XML::TreePP tree
+        my $xmlpath         = shift;  # The parsed XML::TreePP::XMLPath path
+        my $xmltree_parent  = shift || undef;
+        print ("="x8,"sub::filterXMLDoc|_find()\n") if $DEBUG;
+        print (" "x8,"= attempting to find path: ", pp($xmlpath) ,"\n") if $DEBUG;
+        print (" "x8,"= attempting to search in: ", pp($xmltree) ,"\n") if $DEBUG;
+
+        # If there are no more path to analize, return
+        if (! @{$xmlpath} >= 1) {
+            print (" "x8,"= end of path reached\n") if $DEBUG;
+            return $xmltree;
+        }
+
+        my @found;
+        # First determine if we are analizing one of three possibile formats of
+        # the current context:
+        # HASH ref   - $xmltree = {}
+        # ARRAY ref  - $xmltree = []
+        # SCALAR ref - ${$xmltree} =~ /\w/
+        # SCALAR     - $xmltree =~ /\w/
+        if (ref $xmltree eq "HASH") {
+            print (" "x12,"= search tree is HASH\n") if $DEBUG;
+            my $path_element    = shift @{$xmlpath};
+            my $element         = shift @{$path_element};
+            my $filters         = shift @{$path_element};
+            my $xmltree_context = $xmltree;
+            my $xmltree_child;
+
+            # xmltree_context is the current node we are evaluating
+            # xmltree_child is the next node we are going to descend to
+            # xmltree_parent is the node we just descended from, or the xmltree_context of the caller $find->()
+
+            # Do not continue if the desired element in the path does not exist
+            # But if the element refers to an existing subtree, current context,
+            # or the parent, lets deal with it
+            print (" "x12,"= processing element ".$element."\n") if $DEBUG;
+            if ((defined $element) && ($element eq '..')) {
+                if (defined $xmltree_parent) {
+                    $xmltree_context = $xmltree_parent;
+                    $xmltree_parent = undef;
+                }
+            } elsif ((defined $element) && ($element eq '.')) {
+                $xmltree_child = $xmltree_context;
+            } elsif ((defined $element) && (!exists $xmltree_context->{$element})) {
+                return undef;
+            } elsif ((defined $element) && (exists $xmltree_context->{$element})) {
+                $xmltree_child = $xmltree_context->{$element};
+            }
+
+            # Process the first filter, if it exists, for positional testing
+            # If a positional argument is given, shift to the item located at
+            # that position
+            # Yes, this does mean the positional argument must be the first filter.
+            # But then again, this would not make clear sense: /books/book[author="smith"][5]
+            # And this path makes more clear sense: /books/book[5][author="smith"]
+            if ( (defined $filters)              &&
+                 ($filters->[0]->[0] =~ /^\d*$/) &&
+                 (! defined $filters->[0]->[1])  &&
+                 ($filters->[0]->[0] >= 0) ) {
+                print (" "x12,"= processing list position filter.\n") if $DEBUG;
+                my $lpos            = shift @{$filters};
+                my $position        = $lpos->[0] if $lpos >= 1;
+                # context must be multi-valued foo positional arguments to work.
+                # but we make the exception if the positional argument is "1"
+                # which we interprit as the current single context item
+                if (($position > 1) && (ref($xmltree_child) ne "ARRAY")) {
+                    return undef;
+                } elsif (ref($xmltree_child) eq "ARRAY") {
+                    print (" "x12,"= looking up position ",$position,"\n") if $DEBUG;
+                    # Should I instead check first?
+                    # return undef if $position > @{$subtree_context};
+                    $xmltree_child  = $xmltree_child->[($position - 1)] || return undef;
+                }
+            }
+
+            if ((!defined $filters) || (@{$filters} < 1)) {
+                print (" "x12,"= no more filters.\n") if $DEBUG;
+                # If there are no more filters to process, we descend
+                return $find->($xmltree_child,$xmlpath,$xmltree_context);
+            } else {
+                print (" "x12,"= processing remaining filters.\n") if $DEBUG;
+                # If more filters, process each of them
+
+
+                # There is only one possible match with filters against a node,
+                # because of the limitation of filters we accept.
+                # This will change if we accept filters similar to something like this:
+                # /books/book[@id > 5]  # any book with attribute id value greater than 5
+                # /books/book[author="*smith*"]  # any book with element author containing "smith"
+
+                if (ref($xmltree_child) eq "ARRAY") {
+                    my @xmltrees;
+                    foreach my $sub (@{$xmltree_child}) {
+                    print (" "x12,"= search tree descendent is ARRAY.\n") if $DEBUG;
+                        # First make a copy of the $filters to pass in
+                        my $tmpfilters = eval ( pp($filters) );
+                        my $vtree = $processFilters->($sub,$tmpfilters);
+                        push (@xmltrees, $vtree) if defined $vtree;
+                    }
+                    if (@xmltrees >= 1) {
+                        return $find->(\@xmltrees,$xmlpath,$xmltree_context);
+                    }
+                } else {
+                    print (" "x12,"= search tree descendent is NOT ARRAY.\n") if $DEBUG;
+                    my $vtree = $processFilters->($xmltree_child,$filters);
+                    # filters were processed with matches
+                    if (defined $vtree) {
+                        return $find->($xmltree_child,$xmlpath,$xmltree_context);
+                    }
+                }
+                return undef;
+            }
+
+        } elsif (ref $xmltree eq "ARRAY") {
+            print (" "x12 , "= search tree is ARRAY\n") if $DEBUG;
+            foreach my $sub (@{$xmltree}) {
+                # First make a copy of the $xmlpath to pass in
+                my $tmpxmlpath = eval ( pp($xmlpath) );
+                my $xmltree_tmp = $find->($sub,$tmpxmlpath);
+                if (ref $xmltree_tmp eq "ARRAY") {
+                    print (" "x12,"= search tree result is ARRAY\n") if $DEBUG;
+                    foreach my $xt (@{$xmltree_tmp}) {
+                        push (@found,$xt) if defined $xt;
+                    }
+                } else {
+                    print (" "x12,"= search tree result is NOT ARRAY\n") if $DEBUG;
+                    push (@found,$xmltree_tmp) if defined $xmltree_tmp;
+                }
+            }
+            return \@found;
+        } elsif (ref $xmltree eq "SCALAR") {
+            # We have more path to analize, but no more depth to our xml doc
+            # do not - push (@found,${$xmltree});
+            # do nothing
+        } else {  # subtree is text, or some other unrecognized reference
+            # We have more path to analize, but no more depth to our xml doc
+            # do not - push (@found,$xmltree);
+            # do nothing
+        }
+        return undef;  # $xmltree is unrecognized
+    }; # end find->()
+
+    my $found = $find->($xtree,$xpath,$xtree);
+    $found = [$found] if ref $found ne "ARRAY";
+    return undef if (! defined $found || @{$found} == 0) && !defined wantarray;
+    return (@{$found}) if !defined wantarray;
+    return wantarray ? @{$found} : $found;
+}
+
+
 =pod
 
 =head2 validateAttrValue
 
-Validate a subtree of a parsed XML document to have a paramter set in which
-attribute matches value.
+As of version 0.52, this method is deprecated. The method C<filterXMLDoc()>
+should be used instead. See this method's implementation illustration for the
+alternate example using C<filterXMLDoc()>.
+
+Validate a subtree of a parsed XML document to have a parameter set in which
+an attribute matches a value.
 
 =over 4
 
@@ -578,13 +1265,29 @@ This is an array reference of C<[["attr1","val"],["attr2","val"]]>, as in:
 
     my $params = [[ "MyKeyName" , "Value_to_match_for_KeyName" ]];
 
+As of XMLPath version 0.52, one can define an element or attribute existance
+test the C<getSubTree()> method because of its support in the C<parseXMLPath()>
+method. But this feature was already available in this method.
+The result of parsing this with C<parseXMLPath()> for use by this method is as
+follows:
+
+    my $params = [[ "-id", undef ]];  # Test for existance of the attribute "id"
+
 =item * I<returns>
 
 The subtree that is validated, or undef if not validated
 
 =back
 
+    my @params = ( [ "element", "value" ], [ "-attribute", "value" ] );
     $validatedXMLTree = validateAttrValue( $XMLTree , \@params );
+
+    # Alternately, you can do the same using the filterXMLDoc() method using
+    # the single period (.) which identifies the immediate root of the
+    # XML Document (or a XML Document node you provide instead).
+    # If $XMLTree can be either plain text or a XML::TreePP parsed XML Document
+    my $result = filterXMLDoc( $XMLTree, '[.[element="value"][@attribute="value"]]' );
+    my $result = filterXMLDoc( $XMLTree, [ ".", \@params ] );
 
 =cut
 
@@ -611,7 +1314,8 @@ The subtree that is validated, or undef if not validated
 sub validateAttrValue ($$);
 sub validateAttrValue ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    validate_pos( @_, 1, 1);
+    if (@_ != 2) { warn 'method validateAttrValue($$) requires two arguments.'; return undef; }
+    #validate_pos( @_, 1, 1);
     my $subtree     = shift;
     my $params      = shift;
     if (ref $subtree eq "ARRAY") {
@@ -634,38 +1338,48 @@ sub validateAttrValue ($$) {
             if      (   (ref    $subtree->{$attribute} eq "SCALAR" )
                      && (defined                $value             )
                      && (    ${$subtree->{$attribute}} eq $value   ) ) {
+                # If SCALAR, val is defined, and attr=val
                 $param_match_flag = 1;
                 next PARAM;
             } elsif (   (ref    $subtree->{$attribute} eq "SCALAR" )
                      && (! defined              $value             )
                      && (! defined ${$subtree->{$attribute}}       ) ) {
+                # If SCALAR, val is NOT defined, and ref(attr) is undef
                 $param_match_flag = 1;
                 next PARAM;
             } elsif (   (ref    $subtree->{$attribute} eq "SCALAR" )
                      && (                       $value eq ''       )
                      && (    ${$subtree->{$attribute}} eq ''       ) ) {
+                # If SCALAR, val is defined as empty string, and attr=val
+                $param_match_flag = 1;
+                next PARAM;
+            } elsif (   (ref    $subtree->{$attribute} eq "HASH"   )
+                     && (! defined              $value             ) ) {
+                # If HASH, val is NOT defined -> existance test
                 $param_match_flag = 1;
                 next PARAM;
             } elsif (   (ref    $subtree->{$attribute} eq "HASH"   )
                      && (defined                $value             )
                      && (exists $subtree->{$attribute}->{$value}   ) ) {
+                # If HASH, val is defined, and val exists as a hash key
                 $param_match_flag = 1;
                 next PARAM;
             } elsif (    ref    $subtree->{$attribute} eq "ARRAY"  )   {
-                foreach my $attr_val (@{$subtree->{$attribute}}) {
-                    if      (   (! defined    $value          )
-                             && (! defined $attr_val          )) {
+                # we are looking at a ARRAY value
+                foreach my $a_subtree (@{$subtree->{$attribute}}) {
+                    if      (   (! defined     $value          )
+                             && (! defined $a_subtree          )) {
                         $param_match_flag = 1;
                         next PARAM;
-                    } elsif (   (  defined    $value          )
-                             && (             $value eq ''    )
-                             && (  defined $attr_val          )
-                             && (          $attr_val eq ''    )) {
+                    } elsif (   (  defined     $value          )
+                             && (              $value eq ''    )
+                             && (  defined $a_subtree          )
+                             && (          $a_subtree eq ''    )) {
                         $param_match_flag = 1;
                         next PARAM;
-                    } elsif (   (  defined    $value          )
-                             && (  defined $attr_val          )
-                             && (          $attr_val eq $value)) {
+                    } elsif (   (  defined     $value          )
+                             && (  defined $a_subtree          )
+                             && (          $a_subtree eq $value)) {
                         $param_match_flag = 1;
                         next PARAM;
                     }
@@ -673,8 +1387,11 @@ sub validateAttrValue ($$) {
                 $param_match_flag = 0;
                 last PARAM;
             } else {
+                # we are looking at a string value
                 if      (   (! defined $value                      )
                          && (! defined $subtree->{$attribute}      )) {
+                    $param_match_flag = 1;
+                } elsif     (! defined $value                      )  {
                     $param_match_flag = 1;
                 } elsif (   (  defined                 $value      )
                          && (                          $value eq '')
@@ -699,12 +1416,33 @@ sub validateAttrValue ($$) {
     return undef;
 }
 
+
 =pod
 
 =head2 getSubtree
 
+As of version 0.52, this method is deprecated. The function C<filterXMLDoc()>
+should be used instead. See this method's implementation illustration for the
+alternate example using C<filterXMLDoc()>.
+
+Starting in version 0.52, this method still returns the
+same single value as it did in version 0.51, but with additional filtering
+capabilities provided to it by C<filterXMLDoc()> . Also starting in version
+0.52 this method can additionally return an array of values resulting from the
+match. See I<returns> below.
+
 Return a subtree of an XML tree from a given XMLPath.
-See parseXMLPath() for the format of a XMLPath.
+See C<parseXMLPath()> for the format of a XMLPath.
+This function returns the first subtree or an array of subtrees in the given
+XML tree found to match the given XMLPath.
+
+If you want to retrieve all subtrees in the given XML tree which match the given
+XML path, you should ideally use the C<filterXMLDoc()> function.
+
+This method actually executes C<filterXMLDoc()> and returns the first result
+set, or more precisely the first matching node and its subtree in the XML Doc.
+If the context of the caller is requesting a list or array, then all matching
+nodes and their subtrees will be returned to the caller as a list (array).
 
 =over 4
 
@@ -718,11 +1456,19 @@ The path within the XML Tree to retrieve. See parseXMLPath()
 
 =item * I<returns>
 
-A subtree of a XML::TreePP parsed XMLTree found at the XMLPath.
+A subtree of a XML::TreePP parsed XMLTree found at the XMLPath and the caller
+is not requesting an array, otherwise a list of subtrees are returned.
+Depending on the XMLPath given, the returning value(s) could actually be string
+values and not referenced subtree nodes.
 
 =back
 
-    $XMLSubTree = getSubtree ( $XMLTree , $XMLPath ) 
+    $XMLSubTree = getSubtree ( $XMLTree , $XMLPath );
+    @XMLSubTrees = getSubtree ( $XMLTree , $XMLPath );
+
+    # Alternately, you can do the same using the filterXMLDoc() method.
+    my $result = filterXMLDoc( $XMLTree, $XMLPath );
+    my @result = filterXMLDoc( $XMLTree, $XMLPath );
 
 =cut
 
@@ -733,59 +1479,14 @@ A subtree of a XML::TreePP parsed XMLTree found at the XMLPath.
 # @return   a subtree of the XMLTree from the given XMLPath
 sub getSubtree ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    validate_pos( @_, 1, 1);
+    if (@_ != 2) { warn 'method getSubtree($$) requires two arguments.'; return undef; }
+    #validate_pos( @_, 1, 1);
     my $tree        = shift;
     my $path        = shift;
 
-    my $hpath       = parseXMLPath($path);
-    my $subtree     = $tree;
-
-
-    sub _findsubtree($$);
-    sub _findsubtree($$) {
-        my $subtree     = shift;
-        my $xmlpath     = shift;
-        if (! @{$xmlpath} >= 1) {
-            return $subtree;
-        }
-        if (ref $subtree eq "ARRAY") {
-            foreach my $sub (@{$subtree}) {
-                my $subtree_tmp = _findsubtree($sub,$xmlpath);
-                return $subtree_tmp if defined $subtree_tmp;
-            }
-            return undef;
-        } elsif (ref $subtree eq "HASH") {
-            my $path_element = shift @{$xmlpath};
-            my $element      = shift @{$path_element};
-            my $params       = shift @{$path_element};
-            if ((! defined $element) && (! defined $params)) {
-                return _findsubtree($subtree,$xmlpath)
-            } elsif ((defined $element) && (! defined $params)) {
-                if (exists $subtree->{$element}) {
-                    return _findsubtree($subtree->{$element},$xmlpath);
-                } else {
-                    return undef;
-                }
-            } else {
-                my $validated_subtree;
-                if ((! defined $element) || ($element eq '')) {
-                    $validated_subtree = validateAttrValue($subtree,$params);
-                } else {
-                    $validated_subtree = validateAttrValue($subtree->{$element},$params);
-                }
-                if (! defined $validated_subtree) {
-                    return undef;
-                } else {
-                    return _findsubtree($validated_subtree,$xmlpath);
-                }
-            }
-        } else {
-            # Terminal state with more xmlpath elements yet to be evaluated
-            return undef;
-        }
-    }
-
-    return _findsubtree($subtree,$hpath);
+    my $result = filterXMLDoc($tree,$path);
+    return undef unless defined $result;
+    return wantarray ? @{$result} : $result->[0];
 }
 
 =pod
@@ -839,7 +1540,8 @@ Example Returned Data:
 sub getAttributes (@);
 sub getAttributes (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    validate_pos( @_, 1, 0);
+    unless (@_ >= 1) { warn 'method getAttributes($$) requires one argument, and optionally a second argument.'; return undef; }
+    # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
     my $subtree;
@@ -924,7 +1626,8 @@ If the XMLPath has no elements under it, then undef is returned instead.
 sub getElements (@);
 sub getElements (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    validate_pos( @_, 1, 0);
+    unless (@_ >= 1) { warn 'method getElements($$) requires one argument, and optionally a second argument.'; return undef; }
+    # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
     my $subtree;
@@ -1096,11 +1799,181 @@ Output:
       ["last", undef],
     ]
 
+=head2 Method: filterXMLDoc
+
+Filtering an XML Document, using an XMLPath, to find a node within the
+document.
+
+    #!/usr/bin/perl
+    use XML::TreePP;
+    use XML::TreePP::XMLPath qw(filterXMLDoc);
+    use Data::Dump qw(dump);
+    #
+    # The XML document data
+    my $xmldata=<<XMLEND;
+        <level1>
+            <level2>
+                <level3 attr1="val1" attr2="val2">
+                    <attr3>val3</attr3>
+                    <attr4/>
+                    <attrX>one</attrX>
+                    <attrX>two</attrX>
+                    <attrX>three</attrX>
+                </level3>
+                <level3 attr1="valOne"/>
+            </level2>
+        </level1>
+    XMLEND
+    #
+    # Parse the XML docuemnt.
+    my $tpp = new XML::TreePP;
+    my $xmldoc = $tpp->parse($xmldata);
+    print "Output Test #1\n";
+    dump( $xmldoc );
+    #
+    # Retrieve the sub tree of the XML document at path "level1/level2"
+    my $xmlSubTree = filterXMLDoc($xmldoc, 'level1/level2');
+    print "Output Test #2\n";
+    dump( $xmlSubTree );
+    #
+    # Retrieve the sub tree of the XML document at path "level1/level2/level3[@attr1='val1']"
+    my $xmlSubTree = filterXMLDoc($xmldoc, 'level1/level2/level3[@attr1="val1"]');
+    print "Output Test #3\n";
+    dump( $xmlSubTree );
+
+Output:
+
+    Output Test #1
+    {
+      level1 => {
+            level2 => {
+                  level3 => [
+                        {
+                          "-attr1" => "val1",
+                          "-attr2" => "val2",
+                          attr3    => "val3",
+                          attr4    => undef,
+                          attrX    => ["one", "two", "three"],
+                        },
+                        { "-attr1" => "valOne" },
+                      ],
+                },
+          },
+    }
+    Output Test #2
+    {
+      level3 => [
+            {
+              "-attr1" => "val1",
+              "-attr2" => "val2",
+              attr3    => "val3",
+              attr4    => undef,
+              attrX    => ["one", "two", "three"],
+            },
+            { "-attr1" => "valOne" },
+          ],
+    }
+    Output Test #3
+    {
+      "-attr1" => "val1",
+      "-attr2" => "val2",
+      attr3    => "val3",
+      attr4    => undef,
+      attrX    => ["one", "two", "three"],
+    }
+
+Validating attribute and value pairs of a given node.
+
+    #!/usr/bin/perl
+    use XML::TreePP;
+    use XML::TreePP::XMLPath qw(filterXMLDoc);
+    use Data::Dump qw(dump);
+    #
+    # The XML document data
+    my $xmldata=<<XMLEND;
+        <paragraph>
+            <sentence language="english">
+                <words>Do red cats eat yellow food</words>
+                <punctuation>?</punctuation>
+            </sentence>
+            <sentence language="english">
+                <words>Brown cows eat green grass</words>
+                <punctuation>.</punctuation>
+            </sentence>
+        </paragraph>
+    XMLEND
+    #
+    # Parse the XML docuemnt.
+    my $tpp = new XML::TreePP;
+    my $xmldoc = $tpp->parse($xmldata);
+    print "Output Test #1\n";
+    dump( $xmldoc );
+    #
+    # Retrieve the sub tree of the XML document at path "paragraph/sentence"
+    my $xmlSubTree = filterXMLDoc($xmldoc, "paragraph/sentence");
+    print "Output Test #2\n";
+    dump( $xmlSubTree );
+    #
+    my (@params, $validatedSubTree);
+    #
+    # Test the XML Sub Tree to have an attribute "-language" with value "german"
+    @params = (['-language', 'german']);
+    $validatedSubTree = filterXMLDoc($xmlSubTree, [ ".", \@params ]);
+    print "Output Test #3\n";
+    dump( $validatedSubTree );
+    #
+    # Test the XML Sub Tree to have an attribute "-language" with value "english"
+    @params = (['-language', 'english']);
+    $validatedSubTree = filterXMLDoc($xmlSubTree, [ ".", \@params ]);
+    print "Output Test #4\n";
+    dump( $validatedSubTree );
+
+Output:
+
+    Output Test #1
+    {
+      paragraph => {
+            sentence => [
+                  {
+                    "-language" => "english",
+                    punctuation => "?",
+                    words => "Do red cats eat yellow food",
+                  },
+                  {
+                    "-language" => "english",
+                    punctuation => ".",
+                    words => "Brown cows eat green grass",
+                  },
+                ],
+          },
+    }
+    Output Test #2
+    [
+      {
+        "-language" => "english",
+        punctuation => "?",
+        words => "Do red cats eat yellow food",
+      },
+      {
+        "-language" => "english",
+        punctuation => ".",
+        words => "Brown cows eat green grass",
+      },
+    ]
+    Output Test #3
+    undef
+    Output Test #4
+    {
+      "-language" => "english",
+      punctuation => "?",
+      words => "Do red cats eat yellow food",
+    }
+
 =head2 Method: validateAttrValue
 
     #!/usr/bin/perl
     use XML::TreePP;
-    use XML::TreePP::XMLPath qw(getSubtree);
+    use XML::TreePP::XMLPath qw(getSubtree validateAttrValue);
     use Data::Dump qw(dump);
     #
     # The XML document data
@@ -1404,7 +2277,7 @@ Russell E Glaue, http://russ.glaue.org
 
 =head1 SEE ALSO
 
-XML::TreePP
+C<XML::TreePP>
 
 =head1 COPYRIGHT AND LICENSE
 
