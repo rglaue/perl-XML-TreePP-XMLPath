@@ -231,7 +231,7 @@ The result set of this XMLPath would be "C<black>".
 
 package XML::TreePP::XMLPath;
 
-use 5.000;
+use 5.005;
 use strict;
 use warnings;
 use Exporter;

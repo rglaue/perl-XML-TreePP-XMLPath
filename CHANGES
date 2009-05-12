@@ -1,5 +1,24 @@
 Revision history for Perl extension XML::TreePP::XMLPath.
 
+0.52    2009-05-12 reg
+        - Updated documentation with corrections
+        - Expanded the fundamental filter support recognized by XMLPath
+          philosophy. Additional filtering now includes:
+          + attribute/element existance testing : /books/book[@author]
+          + accessing items with positional a argument : /books/book[3]
+          + access the current context with '.' : 
+            /path/node[.="CDATAvalue"] -sameas-> /path[node="CDATAvalue"]/node
+            or /path/node/.[@attr="val"] -sameas-> /path/node[@attr="val"]
+        - Expanded parseXMLPath() to support the new XMLPath filter options
+        - Added filterXMLDoc() method
+          + replaces getSubtree() and validateAttrValue() methods
+          + implements the new XMLPath filter options
+        - Deprecated getSubtree() and validateAttrValue() methods
+        - Added get() and set() methods to support passing in properties that
+          should be used when this module loads XML::TreePP (ie 'attr_prefix')
+        - Added tpp() accessor method to access the loaded instance of
+          XML::TreePP, or to load an instance for this module to use.
+
 0.51    2008-11-10 reg
         - Added Params::Validate dependency to Makefile to allow for
           successful building
