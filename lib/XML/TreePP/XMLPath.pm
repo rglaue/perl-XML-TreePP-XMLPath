@@ -47,9 +47,16 @@ Iterate through all attributes and Elements of each <item> XML element:
 A pure PERL module to compliment the pure PERL XML::TreePP module. XMLPath may
 be similar to XPath, and it does attempt to conform to the XPath standard when
 possible, but it is far from being fully XPath compliant.
+
 Its purpose is to implement an XPath-like accessor methodology to nodes in a
 XML::TreePP parsed XML Document. In contrast, XPath is an accessor methodology
-to nodes in an unparsed XML Document.
+to nodes in an unparsed (or raw) XML Document.
+
+The advantage of using XML::TreePP::XMLPath over any other PERL implementation
+of XPath is that XML::TreePP::XMLPath is an accessor to XML::TreePP parsed
+XML Documents. If you are already using XML::TreePP to parse XML, you can use
+XML::TreePP::XMLPath to access nodes inside that parsed XML Document without
+having to convert it into a raw XML Document.
 
 =head1 REQUIREMENTS
 
