@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-XML::TreePP::XMLPath - Something similar to XPath, allowing definition of paths to XML::TreePP parsed XML Document nodes.
+XML::TreePP::XMLPath - Similar to XPath, defines a path as an accessor to nodes of an XML::TreePP parsed XML Document.
 
 =head1 SYNOPSIS
 
