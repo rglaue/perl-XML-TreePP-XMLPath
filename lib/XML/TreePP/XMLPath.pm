@@ -1090,7 +1090,7 @@ sub filterXMLDoc ($$) {
         print (" "x8,"= attempting to search in: ", pp($xmltree) ,"\n") if $DEBUG;
 
         # If there are no more path to analize, return
-        if (! @{$xmlpath} >= 1) {
+        if ((ref($xmlpath) ne "ARRAY") || (! @{$xmlpath} >= 1)) {
             print (" "x8,"= end of path reached\n") if $DEBUG;
             return $xmltree;
         }
@@ -1226,6 +1226,167 @@ sub filterXMLDoc ($$) {
 
     my $found = $find->($xtree,$xpath,$xtree);
     $found = [$found] if ref $found ne "ARRAY";
+    return undef if (! defined $found || @{$found} == 0) && !defined wantarray;
+    return (@{$found}) if !defined wantarray;
+    return wantarray ? @{$found} : $found;
+}
+
+
+=pod
+
+=head2 getValue
+
+Retrieve the values found in the given XML Docuemnt at the given XMLPath.
+
+This method was added in version 0.53
+
+=over 4
+
+=item * C<XMLDocument>
+
+The XML Document to search and return values from.
+
+=item * C<XMLPath>
+
+The XMLPath to retrieve the values from.
+
+=item * C<valstring => 1|0>
+
+Return values that are strings. (default is 1)
+
+=item * C<valxml => 1|0>
+
+Return values that are xml, as raw xml. (default is 0)
+
+=item * C<valxmlparsed => 1|0>
+
+Return values that are xml, as parsed xml. (default is 0)
+
+=item * C<valtrim => 1|0>
+
+Trim off the white space at the beginning and end of each value in the result
+set before returning the result set. (default is 0)
+
+=item * I<returns>
+
+Returns the values from the XML Document found at the XMLPath.
+
+=back
+
+    # return the value of @author from all book elements
+    $vals = $tppx->getValues( $xmldoc, '/books/book/@author' );
+    # return the values of the current node, or XML Subtree
+    $vals = $tppx->getValues( $xmldoc_node, "." );
+    # return only XML data from the 5th book node
+    $vals = $tppx->getValues( $xmldoc, '/books/book[5]', valstring => 0, valxml => 1 );
+    # return only XML::TreePP parsed XML from the all book nodes having an id attribute
+    $vals = $tppx->getValues( $xmldoc, '/books/book[@id]', valstring => 0, valxmlparsed => 1 );
+    # return both unparsed XML data and text content from the 3rd book excerpt,
+    # and trim off the white space at the beginning and end of each value
+    $vals = $tppx->getValues( $xmldoc, '/books/book[3]/excerpt', valstring => 1, valxml => 1, valtrim => 1 );
+
+=cut
+
+sub getValue (@) {
+    my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
+    if (@_ < 2) { warn 'method getValue(@) requires at least two arguments.'; return undef; }
+    #validate_pos( @_, 1, 1);
+    my $tree        = shift;
+    my $path        = shift;
+    # Supported arguments:
+    # valstring = 1|0    ; default = 1; 1 = return values that are strings
+    # valxml = 1|0       ; default = 0; 1 = return values that are xml, as raw xml
+    # valxmlparsed = 1|0 ; default = 0; 1 = return values that are xml, as parsed xml
+    my %args        = @_;
+    my $v_string    = exists $args{'valstring'}    ? $args{'valstring'}    : 1;
+    my $v_xml       = exists $args{'valxml'}       ? $args{'valxml'}       : 0;
+    my $v_xmlparsed = exists $args{'valxmlparsed'} ? $args{'valxmlparsed'} : 0;
+    my $v_trim      = exists $args{'valtrim'}      ? $args{'valtrim'}      : 0;
+    # Make up this code to dictate allowed combinations of return types
+    my $v_ret_type  = "sp"  if $v_string && $v_xmlparsed;
+       $v_ret_type  = "sx"  if $v_string && $v_xml;
+       $v_ret_type  = "s"   if $v_string && ! $v_xml && ! $v_xmlparsed;
+       $v_ret_type  = "p"   if ! $v_string && $v_xmlparsed;
+       $v_ret_type  = "x"   if ! $v_string && $v_xml;
+
+    my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id,$old_prop_xml_decl);
+
+    if (ref $tree) { $xtree       = $tree;
+                     $xml_text_id = '#text';
+                     $xml_attr_id = '-';
+                   }
+              else { $tpp         = $self ? $self->tpp() : tpp();
+                     $xtree       = $tpp->parse($tree);
+                     $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+                     $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+                   }
+    if (ref $path) { $xpath       = $path;
+                   }
+              else { $xpath       = parseXMLPath($path);
+                   }
+    if ($v_ret_type =~ /x/) {
+        if (ref($tpp) ne "XML::TreePP") {
+            $tpp = $self ? $self->tpp() : tpp();
+        }
+        # $tpp->set( indent => 2 );
+        $old_prop_xml_decl = $tpp->get( "xml_decl" );
+        $tpp->set( xml_decl => '' );
+    }
+
+    print ("="x8,"sub::getValue()\n") if $DEBUG;
+    print (" "x8, "=called with return type: ",$v_ret_type,"\n") if $DEBUG;
+    print (" "x8, "=called with path: ",pp($xpath),"\n") if $DEBUG;
+
+    # Retrieve the sub tree of the XML document at path
+    my $results = filterXMLDoc($xtree, $xpath);
+
+    # for debugging purposes
+    print (" "x8, "=Found at var's path: ", pp( $results ),"\n") if $DEBUG;
+
+    my $getVal = sub ($) {};
+    $getVal = sub ($) {
+        print ("="x8,"sub::getValue|getVal->()\n") if $DEBUG;
+        my $treeNodes = shift;
+        print (" "x8,"getVal-from> ",pp($treeNodes)) if $DEBUG;
+        print (" - '",ref($treeNodes)||'string',"'\n") if $DEBUG;
+        my @results;
+        if (ref($treeNodes) eq "HASH") {
+            my $utreeNodes = eval ( pp($treeNodes) ); # make a copy for the result set
+            push (@results, $utreeNodes->{$xml_text_id}) if exists $utreeNodes->{$xml_text_id} && $v_ret_type =~ /s/;
+            delete $utreeNodes->{$xml_text_id} if exists $utreeNodes->{$xml_text_id} && $v_ret_type =~ /[x,p]/;
+            push (@results, $utreeNodes) if $v_ret_type =~ /p/;
+            push (@results, $tpp->write($utreeNodes)) if $v_ret_type =~ /x/;
+        } elsif (ref($treeNodes) eq "ARRAY") {
+            foreach my $item (@{$treeNodes}) {
+                my $r1 = $getVal->($item);
+                foreach my $r2 (@{$r1}) {
+                    push(@results,$r2) if defined $r2;
+                }
+            }
+        } elsif (! ref($treeNodes)) {
+            push(@results,$treeNodes) if $v_ret_type =~ /s/;
+        }
+        return \@results;
+    };
+
+    if ($v_ret_type =~ /x/) {
+        $tpp->set( xml_decl => $old_prop_xml_decl );
+    }
+
+    my $found = $getVal->($results);
+    $found = [$found] if ref $found ne "ARRAY";
+
+    if ($v_trim) {
+        my $i=0;
+        while($i < @{$found}) {
+            print ("        =trimmimg result (".$i."): '",$found->[$i],"'") if $DEBUG;
+            $found->[$i] =~ s/\s*$//g;
+            $found->[$i] =~ s/^\s*//g;
+            print (" to '",$found->[$i],"'\n") if $DEBUG;
+            $i++;
+        }
+    }
+
     return undef if (! defined $found || @{$found} == 0) && !defined wantarray;
     return (@{$found}) if !defined wantarray;
     return wantarray ? @{$found} : $found;
