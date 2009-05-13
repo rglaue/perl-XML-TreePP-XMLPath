@@ -76,21 +76,35 @@ methods can be imported into its space.
 
 =over 4
 
-=item *     parseXMLPath
+=item *     C<parseXMLPath>
 
-=item *     filterXMLDoc
+=item *     C<filterXMLDoc>
 
-=item *     getAttributes
+=item *     C<getValues>
 
-=item *     getElements
+=item *     C<getAttributes>
 
-=item *     getSubtree
+=item *     C<getElements>
+
+=item *     C<getSubtree>
 
 =back
 
 Example:
 
-    use XML::TreePP::XMLPath qw(parseXMLPath filterXMLDoc getAttributes getElements getSubtree);
+    use XML::TreePP::XMLPath qw(parseXMLPath filterXMLDoc getValues getAttributes getElements getSubtree);
+
+=head1 DEPRECATED METHODS
+
+The following methods are deprecated in the current release.
+
+=over 4
+
+=item *     C<validateAttrValue>
+
+=item *     C<getSubtree>
+
+=back
 
 =head1 XMLPath PHILOSOPHY
 
@@ -254,7 +268,7 @@ BEGIN {
     use vars      qw(@ISA @EXPORT @EXPORT_OK);
     @ISA        = qw(Exporter);
     @EXPORT     = qw();
-    @EXPORT_OK  = qw(&charlexsplit &getAttributes &getElements &getSubtree &parseXMLPath &filterXMLDoc);
+    @EXPORT_OK  = qw(&charlexsplit &getAttributes &getElements &getSubtree &parseXMLPath &filterXMLDoc &getValues);
 
     use vars      qw($REF_NAME);
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
