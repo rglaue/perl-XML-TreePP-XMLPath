@@ -23,12 +23,12 @@ XML::TreePP::XMLPath - Something similar to XPath, allowing definition of paths 
 
 Get a subtree of the XMLTree:
 
-    my $xmlsub = $tppx->getSubTree( $xml , q{rss/channel/item[title="The Comprehensive Perl Archive Network"]} );
+    my $xmlsub = $tppx->filterXMLDoc( $tree , q{rss/channel/item[title="The Comprehensive Perl Archive Network"]} );
     print $xmlsub->{'link'};
 
 Iterate through all attributes and Elements of each <item> XML element:
 
-    my $xmlsub = $tppx->getSubTree( $xml , q{rss/channel/item} );
+    my $xmlsub = $tppx->filterXMLDoc( $tree , q{rss/channel/item} );
     my $h_attr = $tppx->getAttributes( $xmlsub );
     my $h_elem = $tppx->getElements( $xmlsub );
     foreach $attrHash ( @{ $h_attr } ) {
@@ -69,6 +69,8 @@ methods can be imported into its space.
 
 =over 4
 
+=item *     parseXMLPath
+
 =item *     filterXMLDoc
 
 =item *     getAttributes
@@ -76,8 +78,6 @@ methods can be imported into its space.
 =item *     getElements
 
 =item *     getSubtree
-
-=item *     parseXMLPath
 
 =back
 
@@ -1267,12 +1267,14 @@ This is an array reference of C<[["attr1","val"],["attr2","val"]]>, as in:
     my $params = [[ "MyKeyName" , "Value_to_match_for_KeyName" ]];
 
 As of XMLPath version 0.52, one can define an element or attribute existance
-test the C<getSubTree()> method because of its support in the C<parseXMLPath()>
-method. But this feature was already available in this method.
+test with the parsed results from the C<parseXMLPath()> method. This feature
+was already available in this method before 0.52, but C<parseXMLPath()> did
+not provide it from the results of parsing a XMLPath until version 0.52.
 The result of parsing this with C<parseXMLPath()> for use by this method is as
 follows:
 
     my $params = [[ "-id", undef ]];  # Test for existance of the attribute "id"
+                                      # as in this path: /books/book[@id]
 
 =item * I<returns>
 
