@@ -1,8 +1,12 @@
-XML-TreePP-XMLPath version 0.52
+XML-TreePP-XMLPath version 0.53
 ===============================
 
-A Pure PERL extension to Pure PERL XML::TreePP module to support paths to XML
-subtree content. This may seem similar to XPath, but it is not XPath.
+A pure PERL module to compliment the pure PERL XML::TreePP module. XMLPath may
+be similar to XPath, and it does attempt to conform to the XPath standard when
+possible, but it is far from being fully XPath compliant.
+Its purpose is to implement an XPath-like accessor methodology to nodes in a
+XML::TreePP parsed XML Document. In contrast, XPath is an accessor methodology
+to nodes in an unparsed XML Document.
 
 
 EXAMPLE

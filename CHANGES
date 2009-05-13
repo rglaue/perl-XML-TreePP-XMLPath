@@ -1,6 +1,10 @@
 Revision history for Perl extension XML::TreePP::XMLPath.
 
+0.53    (in development, not yet released)
+        - The author has decided to attempt some level of XPath compatibility.
+
 0.52    2009-05-12 reg
+        - Removed dependency on Params::Validate
         - Updated documentation with corrections
         - Expanded the fundamental filter support recognized by XMLPath
           philosophy. Additional filtering now includes:

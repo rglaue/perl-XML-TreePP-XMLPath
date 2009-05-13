@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-XML::TreePP::XMLPath - Something similar to XPath, allowing definition of paths to XML subtrees
+XML::TreePP::XMLPath - Something similar to XPath, allowing definition of paths to XML::TreePP parsed XML Document nodes.
 
 =head1 SYNOPSIS
 
@@ -44,8 +44,12 @@ Iterate through all attributes and Elements of each <item> XML element:
 
 =head1 DESCRIPTION
 
-A Pure PERL extension to Pure PERL XML::TreePP module to support paths to XML
-subtree content. This may seem similar to XPath, but it is not XPath.
+A pure PERL module to compliment the pure PERL XML::TreePP module. XMLPath may
+be similar to XPath, and it does attempt to conform to the XPath standard when
+possible, but it is far from being fully XPath compliant.
+Its purpose is to implement an XPath-like accessor methodology to nodes in a
+XML::TreePP parsed XML Document. In contrast, XPath is an accessor methodology
+to nodes in an unparsed XML Document.
 
 =head1 REQUIREMENTS
 
@@ -249,7 +253,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION $DEBUG $TPPKEYS );
-    $VERSION    = '0.52';
+    $VERSION    = '0.53';
     $DEBUG      = 0;
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 }
@@ -648,11 +652,8 @@ sub charlexsplit (@) {
 
 =head2 parseXMLPath
 
-Parse a string that represents the path to a XML element or attribute in a XML
-document. The XML Path is something like XPath, and attempts to conform to the
-XPath standard, but it is far from being fully XPath compliant.
-XML::TreePP::XMLPath intends to be a method for accessing XML::TreePP parsed
-nodes.
+Parse a string that represents the XMLPath to a XML element or attribute in a
+XML::TreePP parsed XML Document.
 
 Note that the XML attributes, known as "@attr" are transformed into "-attr".
 The preceeding (-) minus in place of the (@) at is the recognized format of
