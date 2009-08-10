@@ -1,16 +1,21 @@
-Revision history for Perl extension XML::TreePP::XMLPath.
+Revision history for Perl module XML::TreePP::XMLPath.
 
-0.53    (in development, not yet released)
+0.53    2009-08-10 reg
         - The author has decided to attempt some level of XPath compatibility.
         - Added new method getValue() to retrieve values from an XML Document
           as derived from the given XMLPath.
+        - Changed warning implementation to carp
+        - Added Data::Dump dependency in Makefile.PL. This dependency was
+          introduced in version 0.52, but failed to be added as a dependency
+          in the Makefile.PL. This resulted in test and runtime errors if that
+          module did not exist on the system.
 
 0.52    2009-05-12 reg
         - Removed dependency on Params::Validate
         - Updated documentation with corrections
         - Expanded the fundamental filter support recognized by XMLPath
           philosophy. Additional filtering now includes:
-          + attribute/element existance testing : /books/book[@author]
+          + attribute/element existence testing : /books/book[@author]
           + accessing items with positional a argument : /books/book[3]
           + access the current context with '.' : 
             /path/node[.="CDATAvalue"] -sameas-> /path[node="CDATAvalue"]/node
