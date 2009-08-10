@@ -1,5 +1,8 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.55    2009-08-10 reg
+        - This is a rerelease of 0.54 for CPAN. There are no modifications.
+
 0.54    2009-08-10 reg
         - There was a conflict in the documentation as to the true name of the
           getValue() method. However, I like getValues() better as the method
