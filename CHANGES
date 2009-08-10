@@ -1,5 +1,11 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.54    2009-08-10 reg
+        - There was a conflict in the documentation as to the true name of the
+          getValue() method. However, I like getValues() better as the method
+          name. So the function getValue() changed names to getValues().
+        - This update was released on the same day as 0.53
+
 0.53    2009-08-10 reg
         - The author has decided to attempt some level of XPath compatibility.
         - Added new method getValue() to retrieve values from an XML Document

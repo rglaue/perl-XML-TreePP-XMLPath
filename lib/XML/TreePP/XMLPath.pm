@@ -277,7 +277,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION $DEBUG $TPPKEYS );
-    $VERSION    = '0.53';
+    $VERSION    = '0.54';
     $DEBUG      = 0;
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 }
@@ -1255,7 +1255,7 @@ sub filterXMLDoc ($$) {
 
 Retrieve the values found in the given XML Document at the given XMLPath.
 
-This method was added in version 0.53
+This method was added in version 0.53 as getValue, and changed to getValues in 0.54
 
 =over 4
 
