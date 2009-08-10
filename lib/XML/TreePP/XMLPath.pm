@@ -168,9 +168,9 @@ B<Things To Note>
 
 Note that attributes are specified in the XMLPath as C<@attribute_name>, but
 after C<XML::TreePP::parse()> parses the XML Document, the attribute name is
-identifed as C<-attribute_name> in the resulting parsed document.
+identified as C<-attribute_name> in the resulting parsed document.
 As of version 0.52 this can be changed using the C<set(attr_prefix=>'@')>
-method. It should only be changed if the XML Docuement is provided as already
+method. It should only be changed if the XML Document is provided as already
 parsed, and the attributes are represented with a value other than the default.
 This document uses the default value of C<-> in its examples.
 
@@ -215,7 +215,7 @@ the current context node. As such, the following XMLPaths would also be valid:
 
 One should realize that in these previous two XMLPaths, the element C<cat> is
 being evaluated, and not the element C<animal> as in the first case. And will
-be undesireable if you want to evaluate C<animal> for results.
+be undesirable if you want to evaluate C<animal> for results.
 
 To perform the same evaluation, but return the matching C<animal> node, the
 following XMLPath can be used:
@@ -228,7 +228,7 @@ following XMLPaths can be used:
     jungle/animal[cat='tiger']/cat
     jungle/animal/cat[.='tiger']
 
-The first path analizes C<animal>, and the second path analizes C<cat>. But
+The first path analyzes C<animal>, and the second path analyzes C<cat>. But
 both matches the same node "<cat color='black>tiger</cat>".
 
 B<Matching attributes>
@@ -286,7 +286,7 @@ BEGIN {
 =head2 tpp
 
 This module is an extension of the XML::TreePP module. As such, it uses the
-module in many different methods to parse XML Docuements, and when the user
+module in many different methods to parse XML Documents, and when the user
 calls the C<set()> and C<get()> methods to set and get properties specific to
 the module.
 
@@ -306,7 +306,7 @@ parse the XML Document with C<XML::TreePP::parse()> before passing it in.
 Passing in an unparsed XML document causes this module to load C<XML::TreePP>
 in order to parse it for processing.
 
-Alternaltely, If the caller has loaded a copy of XML::TreePP, that instance
+Alternately, If the caller has loaded a copy of XML::TreePP, that instance
 can be assigned to be used by the instance of this module using this method.
 In doing so, when XML::TreePP is needed, the instance provided is used instead
 of loading another copy.
@@ -475,7 +475,7 @@ An object instance of this module.
 # 1. By importing the functions you wish to use, as in:
 #       use XML::TreePP::XMLPath qw( function1 function2 );
 #       function1( args )
-# 2. Or by calling the functions in an object oriented mannor, as in:
+# 2. Or by calling the functions in an object oriented manor, as in:
 #       my $tppx = new XML::TreePP::XMLPath()
 #       $tppx->function1( args )
 # Using either method works the same and returns the same output.
@@ -492,27 +492,27 @@ sub new {
 
 =head2 charlexsplit
 
-An analysis method for single character boundry and start/stop tokens
+An analysis method for single character boundary and start/stop tokens
 
 =over 4
 
 =item * C<string>
 
-The string to analyse
+The string to analyze
 
 =item * C<boundry_start>
 
-The single character starting boundry separating wanted elements
+The single character starting boundary separating wanted elements
 
 =item * C<boundry_stop>
 
-The single character stopping boundry separating wanted elements
+The single character stopping boundary separating wanted elements
 
 =item * C<tokens>
 
 A { start_char => stop_char } hash reference of start/stop tokens.
 The characters in C<string> contained within a start_char and stop_char are not
-evaluated to match boundires.
+evaluated to match boundaries.
 
 =item * C<boundry_begin>
 
@@ -526,7 +526,7 @@ character.
 
 =item * I<returns>
 
-An arrary reference of elements
+An array reference of elements
 
 =back
 
@@ -539,14 +539,14 @@ An arrary reference of elements
 =cut
 
 # charlexsplit
-# @brief    A lexical analysis function for single character boundry and start/stop tokens
-# @param    string          the string to analyse
-# @param    boundry_start   the single character starting boundry separating wanted elements
-# @param    boundry_stop    the single character stopping boundry separating wanted elements
+# @brief    A lexical analysis function for single character boundary and start/stop tokens
+# @param    string          the string to analyze
+# @param    boundry_start   the single character starting boundary separating wanted elements
+# @param    boundry_stop    the single character stopping boundary separating wanted elements
 # @param    tokens          a { start_char => stop_char } hash reference of start/stop tokens
 # @param    boundry_begin   set to "1" if the beginning of the string should be treated as a 'boundry_start' character
 # @param    boundry_end     set to "1" if the ending of the string should be treated as a 'boundry_stop' character
-# @return   an arrary reference of the resulting parsed elements
+# @return   an array reference of the resulting parsed elements
 #
 # Example:
 # {
@@ -602,8 +602,8 @@ sub charlexsplit (@) {
     #                         );
 
     my $string          = $args{'string'};        # The string to parse
-    my $boundry_start   = $args{'boundry_start'}; # The boundry character separating wanted elements
-    my $boundry_stop    = $args{'boundry_stop'};  # The boundry character separating wanted elements
+    my $boundry_start   = $args{'boundry_start'}; # The boundary character separating wanted elements
+    my $boundry_stop    = $args{'boundry_stop'};  # The boundary character separating wanted elements
     my %tokens          = @{$args{'tokens'}};     # The start=>stop characters that must be paired inside an element
     my $boundry_begin   = $args{'boundry_begin'} || 0;
     my $boundry_end     = $args{'boundry_end'} || 0;
@@ -628,10 +628,10 @@ sub charlexsplit (@) {
                     push(@elements,$current_element);   # -put the current element in the elements array...
                     $current_element = undef;           # -stop collecting elements.
                 }
-                if ($boundry_start ne $boundry_stop) {  # -and the start and stop boundries are different
+                if ($boundry_start ne $boundry_stop) {  # -and the start and stop boundaries are different
                     $collect = 0;                       # -turn off collection
                 } else {
-                    $collect = 1;                       # -but keep collection on if the boundries are the same
+                    $collect = 1;                       # -but keep collection on if the boundaries are the same
                 }
                 next CHAR;              # Process the next character if this character matches the boundry_stop character.
             }
@@ -678,7 +678,7 @@ Parse a string that represents the XMLPath to a XML element or attribute in a
 XML::TreePP parsed XML Document.
 
 Note that the XML attributes, known as "@attr" are transformed into "-attr".
-The preceeding (-) minus in place of the (@) at is the recognized format of
+The preceding (-) minus in place of the (@) at is the recognized format of
 attributes in the XML::TreePP module.
 
 Being that this is intended to be a submodule of XML::TreePP, the format of 
@@ -694,24 +694,24 @@ Example:
     my $tppx = new XML::TreePP::XMLPath();
     $tppx->set( attr_prefix => '@' );
 
-B<XMLPath Filter by index and existance>
+B<XMLPath Filter by index and existence>
 Also, as of version 0.52, there are two additional types of XMLPaths understood.
 
 I<XMLPath with indexes, which is similar to the way XPath does it>
 
     $path = '/books/book[5]';
 
-This defines the fith book in a list of book elements under the books root.
+This defines the fifth book in a list of book elements under the books root.
 When using this to get the value, the 5th book is returned.
 When using this to test an element, there must be 5 or more books to return true.
 
-I<XMLPath by existance, which is similar to the way XPath does it>
+I<XMLPath by existence, which is similar to the way XPath does it>
 
     $path = '/books/book[author]';
 
 This XMLPath represents all book elements under the books root which have 1 or
 more author child element. It does not evaluate if the element or attribute to
-evaluate has a value. So it is a test for existance of the element or attribute.
+evaluate has a value. So it is a test for existence of the element or attribute.
 
 =over 4
 
@@ -721,7 +721,7 @@ The XML path to be parsed.
 
 =item * I<returns>
 
-An arrary reference of array referenced elements of the XMLPath.
+An array reference of array referenced elements of the XMLPath.
 
 =back
 
@@ -1082,7 +1082,7 @@ sub filterXMLDoc ($$) {
 
         } #end FILTER
         if ($filters_processed_count == 0) {
-            # there was some unusal error which caused a lot of undef filters
+            # there was some unusual error which caused a lot of undef filters
             # And as such, $param_match_flag will be 0
             # we return the entire tree as valid
             return $xmltree_child;
@@ -1104,14 +1104,14 @@ sub filterXMLDoc ($$) {
         print (" "x8,"= attempting to find path: ", pp($xmlpath) ,"\n") if $DEBUG;
         print (" "x8,"= attempting to search in: ", pp($xmltree) ,"\n") if $DEBUG;
 
-        # If there are no more path to analize, return
+        # If there are no more path to analyze, return
         if ((ref($xmlpath) ne "ARRAY") || (! @{$xmlpath} >= 1)) {
             print (" "x8,"= end of path reached\n") if $DEBUG;
             return $xmltree;
         }
 
         my @found;
-        # First determine if we are analizing one of three possibile formats of
+        # First determine if we are analyzing one of three possible formats of
         # the current context:
         # HASH ref   - $xmltree = {}
         # ARRAY ref  - $xmltree = []
@@ -1161,7 +1161,7 @@ sub filterXMLDoc ($$) {
                 my $position        = $lpos->[0] if $lpos >= 1;
                 # context must be multi-valued foo positional arguments to work.
                 # but we make the exception if the positional argument is "1"
-                # which we interprit as the current single context item
+                # which we interpret as the current single context item
                 if (($position > 1) && (ref($xmltree_child) ne "ARRAY")) {
                     return undef;
                 } elsif (ref($xmltree_child) eq "ARRAY") {
@@ -1190,7 +1190,7 @@ sub filterXMLDoc ($$) {
                 if (ref($xmltree_child) eq "ARRAY") {
                     my @xmltrees;
                     foreach my $sub (@{$xmltree_child}) {
-                    print (" "x12,"= search tree descendent is ARRAY.\n") if $DEBUG;
+                    print (" "x12,"= search tree descendant is ARRAY.\n") if $DEBUG;
                         # First make a copy of the $filters to pass in
                         my $tmpfilters = eval ( pp($filters) );
                         my $vtree = $processFilters->($sub,$tmpfilters);
@@ -1200,7 +1200,7 @@ sub filterXMLDoc ($$) {
                         return $find->(\@xmltrees,$xmlpath,$xmltree_context);
                     }
                 } else {
-                    print (" "x12,"= search tree descendent is NOT ARRAY.\n") if $DEBUG;
+                    print (" "x12,"= search tree descendant is NOT ARRAY.\n") if $DEBUG;
                     my $vtree = $processFilters->($xmltree_child,$filters);
                     # filters were processed with matches
                     if (defined $vtree) {
@@ -1228,11 +1228,11 @@ sub filterXMLDoc ($$) {
             }
             return \@found;
         } elsif (ref $xmltree eq "SCALAR") {
-            # We have more path to analize, but no more depth to our xml doc
+            # We have more path to analyze, but no more depth to our xml doc
             # do not - push (@found,${$xmltree});
             # do nothing
         } else {  # subtree is text, or some other unrecognized reference
-            # We have more path to analize, but no more depth to our xml doc
+            # We have more path to analyze, but no more depth to our xml doc
             # do not - push (@found,$xmltree);
             # do nothing
         }
@@ -1251,7 +1251,7 @@ sub filterXMLDoc ($$) {
 
 =head2 getValue
 
-Retrieve the values found in the given XML Docuemnt at the given XMLPath.
+Retrieve the values found in the given XML Document at the given XMLPath.
 
 This method was added in version 0.53
 
@@ -1449,14 +1449,14 @@ This is an array reference of C<[["attr1","val"],["attr2","val"]]>, as in:
 
     my $params = [[ "MyKeyName" , "Value_to_match_for_KeyName" ]];
 
-As of XMLPath version 0.52, one can define an element or attribute existance
+As of XMLPath version 0.52, one can define an element or attribute existence
 test with the parsed results from the C<parseXMLPath()> method. This feature
 was already available in this method before 0.52, but C<parseXMLPath()> did
 not provide it from the results of parsing a XMLPath until version 0.52.
 The result of parsing this with C<parseXMLPath()> for use by this method is as
 follows:
 
-    my $params = [[ "-id", undef ]];  # Test for existance of the attribute "id"
+    my $params = [[ "-id", undef ]];  # Test for existence of the attribute "id"
                                       # as in this path: /books/book[@id]
 
 =item * I<returns>
@@ -1495,7 +1495,7 @@ The subtree that is validated, or undef if not validated
 # In the first case with an ARRAY Reference, the first item in the array
 # that can be validated is what is returned. If you want all items in the
 # array that are valid, you will need to pass each item in to this function
-# individualy for validating.
+# individually for validating.
 #
 sub validateAttrValue ($$);
 sub validateAttrValue ($$) {
@@ -1541,7 +1541,7 @@ sub validateAttrValue ($$) {
                 next PARAM;
             } elsif (   (ref    $subtree->{$attribute} eq "HASH"   )
                      && (! defined              $value             ) ) {
-                # If HASH, val is NOT defined -> existance test
+                # If HASH, val is NOT defined -> existence test
                 $param_match_flag = 1;
                 next PARAM;
             } elsif (   (ref    $subtree->{$attribute} eq "HASH"   )
@@ -1691,10 +1691,10 @@ The path within the XML Tree to retrieve. See parseXMLPath()
 
 =item * I<returns>
 
-An array refrence of [{attribute=>value}], or undef if none found
+An array reference of [{attribute=>value}], or undef if none found
 
 In the case where the XML Path points at a multi-same-name element, the return
-value is a ref arrary of ref hashes, one hash ref for each element.
+value is a ref array of ref hashes, one hash ref for each element.
 
 Example Returned Data:
 
@@ -1712,11 +1712,11 @@ Example Returned Data:
 
 # getAttributes
 # @param    xmltree     the XML::TreePP parsed xml document
-# @parah    xmlpath     the XML path (See parseXMLPath)
+# @param    xmlpath     the XML path (See parseXMLPath)
 # @return   an array ref of [{attr=>val, attr=>val}], or undef if none found
 #
 # In the case where the XML Path points at a multi-same-name element, the
-# return value is a ref arrary of ref arrays, one for each element.
+# return value is a ref array of ref arrays, one for each element.
 # Example:
 #  XML Path points at a single named element
 #  [{attr1=>val, attr2=>val}]
@@ -1777,7 +1777,7 @@ The path within the XML Tree to retrieve. See parseXMLPath()
 
 =item * I<returns>
 
-An array refrence of [{element=>value}], or undef if none found
+An array reference of [{element=>value}], or undef if none found
 
 An array reference of a hash reference of elements (not attributes) and each
 elements XMLSubTree, or undef if none found. If the XMLPath points at a
@@ -1804,7 +1804,7 @@ If the XMLPath has no elements under it, then undef is returned instead.
 
 # getElements
 # @param    xmltree     the XML::TreePP parsed xml document
-# @parah    xmlpath     the XML path (See parseXMLPath)
+# @param    xmlpath     the XML path (See parseXMLPath)
 # @return   an array ref of [[element,{val}]] where val can be a scalar or a subtree, or undef if none found
 #
 # See also getAttributes function for further details of the return type
@@ -1870,7 +1870,7 @@ This module supports being called by two methods.
 
 See IMPORTABLE METHODS section for methods available for import
 
-=item 2.  Or by calling the functions in an object oriented mannor, as in:
+=item 2.  Or by calling the functions in an object oriented manor, as in:
 
     my $tppx = new XML::TreePP::XMLPath;
     $tppx->function1( args )
@@ -1885,7 +1885,7 @@ Here are three steps that can be used to parse values out of a string:
 
 Step 1:
 
-First, parse the entire string deliminated by the / character.
+First, parse the entire string delimited by the / character.
 
     my $el = charlexsplit   (
         string        => q{abcdefg/xyz/path[@key='val'][@key2='val2']/last},
@@ -1923,7 +1923,7 @@ Output:
 Step 3:
 
 Third, parse the elements from step 2 that is a single key/val, the single
-key/val is delimintated by the = character
+key/val is delimited by the = character
 
     my $el = charlexsplit (
         string        => q{ @key='val' },
@@ -1940,7 +1940,7 @@ Output:
     ["\@key", "'val'"]
 
 Note that in each example the C<tokens> represent a group of escaped characters
-which, when analysed, will be collected as part of an element, but will not be
+which, when analyzed, will be collected as part of an element, but will not be
 allowed to match any starting or stopping boundry.
 
 So if you have a start token without a stop token, you will get undesired
@@ -2011,7 +2011,7 @@ document.
         </level1>
     XMLEND
     #
-    # Parse the XML docuemnt.
+    # Parse the XML document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
@@ -2089,7 +2089,7 @@ Validating attribute and value pairs of a given node.
         </paragraph>
     XMLEND
     #
-    # Parse the XML docuemnt.
+    # Parse the XML document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
@@ -2176,7 +2176,7 @@ Output:
         </paragraph>
     XMLEND
     #
-    # Parse the XML docuemnt.
+    # Parse the XML document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
@@ -2265,7 +2265,7 @@ Output:
         </level1>
     XMLEND
     #
-    # Parse the XML docuemnt.
+    # Parse the XML document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
@@ -2348,7 +2348,7 @@ See validateAttrValue() EXAMPLES section for more usage examples.
         </level1>
     XMLEND
     #
-    # Parse the XML docuemnt.
+    # Parse the XML document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
@@ -2412,7 +2412,7 @@ Output:
         </level1>
     XMLEND
     #
-    # Parse the XML docuemnt.
+    # Parse the XML document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
