@@ -67,6 +67,8 @@ The following perl modules are depended on by this module:
 
 =item *     XML::TreePP
 
+=item *     Data::Dump
+
 =back
 
 =head1 IMPORTABLE METHODS
