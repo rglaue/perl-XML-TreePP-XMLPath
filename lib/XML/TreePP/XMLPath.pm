@@ -260,6 +260,7 @@ use 5.005;
 use strict;
 use warnings;
 use Exporter;
+use Carp;
 #use Params::Validate qw(:all);
 use XML::TreePP;
 use Data::Dump qw(pp);
@@ -586,11 +587,11 @@ sub charlexsplit (@) {
     my $self            = shift if ref($_[0]) eq $REF_NAME || undef;
     my %args            = @_;
     my @warns;
-    push(@warns,'string')           if !exists $args{'string'};
+    push(@warns,'string')           if !defined $args{'string'};
     push(@warns,'boundry_start')    if !exists $args{'boundry_start'};
     push(@warns,'boundry_stop')     if !exists $args{'boundry_stop'};
     push(@warns,'tokens')           if !exists $args{'tokens'};
-    if (@warns) { warn ('method charlexsplit(@) requires the arguments: '.join(', ',@warns).'.'); return undef; }
+    if (@warns) { carp ('method charlexsplit(@) requires the arguments: '.join(', ',@warns).'.'); return undef; }
     #my %args    =   validate ( @_,  {   string          => { type => SCALAR,   optional => 0 },
     #                                    boundry_start   => { type => SCALAR,   optional => 0 },
     #                                    boundry_stop    => { type => SCALAR,   optional => 0 },
@@ -771,7 +772,7 @@ An arrary reference of array referenced elements of the XMLPath.
 #
 sub parseXMLPath ($) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 1) { warn 'method parseXMLPath($) requires one argument.'; return undef; }
+    if (@_ != 1) { carp 'method parseXMLPath($) requires one argument.'; return undef; }
     #validate_pos( @_, 1);
     my $path        = shift;
     my $hpath       = [];
@@ -934,10 +935,10 @@ You can retrieve the result set in one of two formats.
 
 sub filterXMLDoc ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 2) { warn 'method filterXMLDoc($$) requires two arguments.'; return undef; }
+    if (@_ != 2) { carp 'method filterXMLDoc($$) requires two arguments.'; return undef; }
     #validate_pos( @_, 1, 1);
-    my $tree        = shift;
-    my $path        = shift;
+    my $tree        = shift || (carp 'filterXMLDoc($$) requires two arguments.' && return undef);
+    my $path        = shift || (carp 'filterXMLDoc($$) requires two arguments.' && return undef);
     my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id);
 
     if (ref $tree) { $xtree       = $tree;
@@ -1303,7 +1304,7 @@ Returns the values from the XML Document found at the XMLPath.
 
 sub getValue (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ < 2) { warn 'method getValue(@) requires at least two arguments.'; return undef; }
+    if (@_ < 2) { carp 'method getValue(@) requires at least two arguments.'; return undef; }
     #validate_pos( @_, 1, 1);
     my $tree        = shift;
     my $path        = shift;
@@ -1499,7 +1500,7 @@ The subtree that is validated, or undef if not validated
 sub validateAttrValue ($$);
 sub validateAttrValue ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 2) { warn 'method validateAttrValue($$) requires two arguments.'; return undef; }
+    if (@_ != 2) { carp 'method validateAttrValue($$) requires two arguments.'; return undef; }
     #validate_pos( @_, 1, 1);
     my $subtree     = shift;
     my $params      = shift;
@@ -1664,7 +1665,7 @@ values and not referenced subtree nodes.
 # @return   a subtree of the XMLTree from the given XMLPath
 sub getSubtree ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 2) { warn 'method getSubtree($$) requires two arguments.'; return undef; }
+    if (@_ != 2) { carp 'method getSubtree($$) requires two arguments.'; return undef; }
     #validate_pos( @_, 1, 1);
     my $tree        = shift;
     my $path        = shift;
@@ -1725,7 +1726,7 @@ Example Returned Data:
 sub getAttributes (@);
 sub getAttributes (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    unless (@_ >= 1) { warn 'method getAttributes($$) requires one argument, and optionally a second argument.'; return undef; }
+    unless (@_ >= 1) { carp 'method getAttributes($$) requires one argument, and optionally a second argument.'; return undef; }
     # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
@@ -1811,7 +1812,7 @@ If the XMLPath has no elements under it, then undef is returned instead.
 sub getElements (@);
 sub getElements (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    unless (@_ >= 1) { warn 'method getElements($$) requires one argument, and optionally a second argument.'; return undef; }
+    unless (@_ >= 1) { carp 'method getElements($$) requires one argument, and optionally a second argument.'; return undef; }
     # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
