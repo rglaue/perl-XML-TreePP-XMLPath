@@ -1251,7 +1251,7 @@ sub filterXMLDoc ($$) {
 
 =pod
 
-=head2 getValue
+=head2 getValues
 
 Retrieve the values found in the given XML Document at the given XMLPath.
 
@@ -1304,9 +1304,9 @@ Returns the values from the XML Document found at the XMLPath.
 
 =cut
 
-sub getValue (@) {
+sub getValues (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ < 2) { carp 'method getValue(@) requires at least two arguments.'; return undef; }
+    if (@_ < 2) { carp 'method getValues(@) requires at least two arguments.'; return undef; }
     #validate_pos( @_, 1, 1);
     my $tree        = shift;
     my $path        = shift;
@@ -1350,7 +1350,7 @@ sub getValue (@) {
         $tpp->set( xml_decl => '' );
     }
 
-    print ("="x8,"sub::getValue()\n") if $DEBUG;
+    print ("="x8,"sub::getValues()\n") if $DEBUG;
     print (" "x8, "=called with return type: ",$v_ret_type,"\n") if $DEBUG;
     print (" "x8, "=called with path: ",pp($xpath),"\n") if $DEBUG;
 
@@ -1362,7 +1362,7 @@ sub getValue (@) {
 
     my $getVal = sub ($) {};
     $getVal = sub ($) {
-        print ("="x8,"sub::getValue|getVal->()\n") if $DEBUG;
+        print ("="x8,"sub::getValues|getVal->()\n") if $DEBUG;
         my $treeNodes = shift;
         print (" "x8,"getVal-from> ",pp($treeNodes)) if $DEBUG;
         print (" - '",ref($treeNodes)||'string',"'\n") if $DEBUG;
