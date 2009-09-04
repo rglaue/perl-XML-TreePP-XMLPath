@@ -1734,7 +1734,7 @@ sub getAttributes (@) {
     my $path        = shift || undef;
     my $subtree;
     if (defined $path) {
-        $subtree = getSubtree($tree,$path);
+        $subtree = filterXMLDoc($tree,$path);
     } else {
         $subtree = $tree;
     }
@@ -1820,7 +1820,7 @@ sub getElements (@) {
     my $path        = shift || undef;
     my $subtree;
     if (defined $path) {
-        $subtree = getSubtree($tree,$path);
+        $subtree = filterXMLDoc($tree,$path);
     } else {
         $subtree = $tree;
     }
