@@ -1,4 +1,4 @@
-XML-TreePP-XMLPath version 0.55
+XML-TreePP-XMLPath version 0.56
 ===============================
 
 A pure PERL module to compliment the pure PERL XML::TreePP module. XMLPath may
@@ -57,6 +57,34 @@ Iterate through all attributes and Elements of each <item> XML element:
         }
     }
 
+EXAMPLE for using XML::TreePP::XMLPath to access a non-XML compliant tree of
+PERL referenced data.
+
+    use XML::TreePP::XMLPath;
+    
+    my $tppx = new XML::TreePP::XMLPath;
+    my $hashtree = {
+        config => {
+            nodes => {
+                "10.0.10.5" => {
+                    options => [ 'option1', 'option2' ],
+                    alerts => {
+                        email => 'someone@nowhere.org'
+                    }
+                }
+            }
+        }
+    };
+    print $tppx->filterXMLDoc($hashtree, '/config/nodes/10.0.10.5/alerts/email');
+    print "\n";
+    print $tppx->filterXMLDoc($hashtree, '/config/nodes/10.0.10.5/options')->[1];
+    print "\n";
+
+Result
+    
+    someone@nowhere.org
+    option2
+
 
 INSTALLATION
 
@@ -73,6 +101,7 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
   XML::TreePP
+  Data::Dump
 
 
 COPYRIGHT AND LICENSE

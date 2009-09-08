@@ -1,5 +1,16 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.56    2009-09-08 reg
+        - This fixes a bug for getElements and getAttributes methods. These
+          methods were only returning values for the first found node instead of
+          all found nodes. The fix was to change these methods to use the
+          filterXMLDoc method, instead of the deprecated getSubtree method.
+        - New test cases added to test the aformentioned scenario.
+        - The helper script 'runtests.pl' was added to allow for manually
+          executing all test cases at once.
+        - Documentation added to README and POD to describe how to use this
+          module with a generic (non-XML) PERL code reference tree.
+
 0.55    2009-08-10 reg
         - This is a rerelease of 0.54 for CPAN. There are no modifications.
 
