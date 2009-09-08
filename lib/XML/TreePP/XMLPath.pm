@@ -86,6 +86,11 @@ XML Documents. If you are already using XML::TreePP to parse XML, you can use
 XML::TreePP::XMLPath to access nodes inside that parsed XML Document without
 having to convert it into a raw XML Document.
 
+As an additional side-benefit, any PERL HASH/ARRY reference data structure can
+be accessible via the XPath accessor method provided by this module. It does
+not have to a parsed XML structure. The last example in the SYNOPSIS illustrates
+this.
+
 =head1 REQUIREMENTS
 
 The following perl modules are depended on by this module:
@@ -2495,9 +2500,11 @@ Russell E Glaue, http://russ.glaue.org
 
 C<XML::TreePP>
 
+XML::TreePP::XMLPath on Codepin: http://www.codepin.org/project/perlmod/XML-TreePP-XMLPath
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2008 Center for the Application of Information Technologies.
+Copyright (c) 2008-2009 Center for the Application of Information Technologies.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
