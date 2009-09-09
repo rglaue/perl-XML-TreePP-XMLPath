@@ -1,5 +1,9 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.57    2009-XX-XX reg
+        - not released - in development
+        - updated POD Documentation
+
 0.56    2009-09-08 reg
         - This fixes a bug for getElements and getAttributes methods. These
           methods were only returning values for the first found node instead of

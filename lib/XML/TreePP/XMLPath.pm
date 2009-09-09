@@ -62,7 +62,7 @@ PERL referenced data.
     };
     print $tppx->filterXMLDoc($hashtree, '/config/nodes/10.0.10.5/alerts/email');
     print "\n";
-    print $tppx->filterXMLDoc($hashtree, '/config/nodes/10.0.10.5/options')->[1];
+    print $tppx->filterXMLDoc($hashtree, '/config/nodes/10.0.10.5/options[2]');
     print "\n";
 
 Result
@@ -310,7 +310,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION $DEBUG $TPPKEYS );
-    $VERSION    = '0.56';
+    $VERSION    = '0.57';
     $DEBUG      = 0;
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 }
