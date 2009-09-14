@@ -976,6 +976,16 @@ sub filterXMLDoc ($$) {
     my $path        = shift || (carp 'filterXMLDoc($$) requires two arguments.' && return undef);
     my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id);
 
+    # Next 7 lines of code is considered for 0.57
+    if ((defined $self) && (defined $self->get('tpp'))) {
+        $tpp         = $self ? $self->tpp() : tpp();
+        $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+        $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+    } else {
+        $xml_text_id = '#text';
+        $xml_attr_id = '-';
+    }
+    # end 0.57 onsideration
     if (ref $tree) { $xtree       = $tree;
                      $xml_text_id = '#text';
                      $xml_attr_id = '-';
@@ -985,7 +995,7 @@ sub filterXMLDoc ($$) {
                      $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
                      $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
                    }
-    if (ref $path) { $xpath       = $path;
+    if (ref $path) { $xpath       = eval (pp($path)); # make a copy of inputted parsed XMLPath
                    }
               else { $xpath       = parseXMLPath($path);
                    }
@@ -1064,13 +1074,24 @@ sub filterXMLDoc ($$) {
             print ("\n") if $DEBUG;
 
             # attribute/element exists filter
-            if (($param ne ".") && (! exists $xmltree_child->{$param})) {
-                $param_match_flag = 0;
-                last FILTER;
-            } elsif ((($param eq ".") || (exists $xmltree_child->{$param})) && (! defined $value)) {
-                # NOTE, maybe filter needs to be [['attr'],['attr','val']] for this one
+            # deal with special #text/$xml_text_id element
+            if (ref $xmltree_child eq "HASH") {
+                if (($param ne ".") && (! exists $xmltree_child->{$param})) {
+                    $param_match_flag = 0;
+                    last FILTER;
+                } elsif ((($param eq ".") || (exists $xmltree_child->{$param})) && (! defined $value)) {
+                    # NOTE, maybe filter needs to be [['attr'],['attr','val']] for this one
+                    $param_match_flag = 1;
+                    next FILTER;
+                }
+            } elsif (   ($param eq $xml_text_id)
+                     && (($xmltree_child =~ /\w+/) || ((ref $xmltree_child eq "SCALAR") && (${$xmltree_child} =~ /\w+/)))) {
                 $param_match_flag = 1;
                 next FILTER;
+            } else {
+                # else ref $xmltree_child eq "ARRAY" or "BLOB" or something
+                $param_match_flag = 0;
+                last FILTER;
             }
 
             print (" "x12,"= about to validate filter.\n") if $DEBUG;
@@ -1188,12 +1209,13 @@ sub filterXMLDoc ($$) {
             # But then again, this would not make clear sense: /books/book[author="smith"][5]
             # And this path makes more clear sense: /books/book[5][author="smith"]
             if ( (defined $filters)              &&
+                 (defined $filters->[0])         &&
                  ($filters->[0]->[0] =~ /^\d*$/) &&
                  (! defined $filters->[0]->[1])  &&
-                 ($filters->[0]->[0] >= 0) ) {
+                 ($filters->[0]->[0] >= 1) ) {
                 print (" "x12,"= processing list position filter.\n") if $DEBUG;
                 my $lpos            = shift @{$filters};
-                my $position        = $lpos->[0] if $lpos >= 1;
+                my $position        = $lpos->[0]; # if $lpos >= 1;
                 # context must be multi-valued foo positional arguments to work.
                 # but we make the exception if the positional argument is "1"
                 # which we interpret as the current single context item
@@ -1202,7 +1224,7 @@ sub filterXMLDoc ($$) {
                 } elsif (ref($xmltree_child) eq "ARRAY") {
                     print (" "x12,"= looking up position ",$position,"\n") if $DEBUG;
                     # Should I instead check first?
-                    # return undef if $position > @{$subtree_context};
+                    # return undef if $position > @{$xmltree_child};
                     $xmltree_child  = $xmltree_child->[($position - 1)] || return undef;
                 }
             }
@@ -1275,6 +1297,7 @@ sub filterXMLDoc ($$) {
     }; # end find->()
 
     my $found = $find->($xtree,$xpath,$xtree);
+    return undef if ! defined $found;
     $found = [$found] if ref $found ne "ARRAY";
     return undef if (! defined $found || @{$found} == 0) && !defined wantarray;
     return (@{$found}) if !defined wantarray;
@@ -1361,6 +1384,16 @@ sub getValues (@) {
 
     my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id,$old_prop_xml_decl);
 
+    # Next 7 lines of code is considered for 0.57
+    if ((defined $self) && (defined $self->get('tpp'))) {
+        $tpp         = $self ? $self->tpp() : tpp();
+        $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+        $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+    } else {
+        $xml_text_id = '#text';
+        $xml_attr_id = '-';
+    }
+    # end 0.57 onsideration
     if (ref $tree) { $xtree       = $tree;
                      $xml_text_id = '#text';
                      $xml_attr_id = '-';
@@ -1765,6 +1798,19 @@ sub getAttributes (@) {
     # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
+
+    # Next 7 lines of code is considered for 0.57
+    my ($xml_text_id,$xml_attr_id);
+    if ((defined $self) && (defined $self->get('tpp'))) {
+        my $tpp      = $self ? $self->tpp() : tpp();
+        $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+        $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+    } else {
+        $xml_text_id = '#text';
+        $xml_attr_id = '-';
+    }
+    # end 0.57 onsideration
+
     my $subtree;
     if (defined $path) {
         $subtree = filterXMLDoc($tree,$path);
