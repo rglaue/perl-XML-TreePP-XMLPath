@@ -2,6 +2,6 @@ CHANGES
 Makefile.PL
 MANIFEST
 README
-runtests.pl
+runtests
 t/XML-TreePP-XMLPath.t
 lib/XML/TreePP/XMLPath.pm

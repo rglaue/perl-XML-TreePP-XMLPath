@@ -296,7 +296,6 @@ use strict;
 use warnings;
 use Exporter;
 use Carp;
-#use Params::Validate qw(:all);
 use XML::TreePP;
 use Data::Dump qw(pp);
 
@@ -309,10 +308,17 @@ BEGIN {
     use vars      qw($REF_NAME);
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
-    use vars      qw( $VERSION $DEBUG $TPPKEYS );
-    $VERSION    = '0.57';
-    $DEBUG      = 0;
+    use vars      qw( $VERSION $TPPKEYS );
+    $VERSION    = '0.60';
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
+
+    use vars      qw( $DEBUG $DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
+    $DEBUG          = 0;
+    $DEBUGMETHOD    = 1;
+    $DEBUGNODE      = 2;
+    $DEBUGPATH      = 3;
+    $DEBUGFILTER    = 4;
+    $DEBUGDUMP      = 7;
 }
 
 
@@ -360,7 +366,7 @@ This method was added in version 0.52
 
 =over 4
 
-=item * C<XML::TreePP>
+=item * B<XML::TreePP>
 
 An instance of XML::TreePP that this object should use instead of, when needed,
 loading its own copy. If not provided, the currently loaded instance is
@@ -403,11 +409,11 @@ This method was added in version 0.52
 
 =over 4
 
-=item * C<propertyname>
+=item * B<propertyname>
 
 The property to set the value for.
 
-=item * C<propertyvalue>
+=item * B<propertyvalue>
 
 The value of the property to set.
 If no value is given, the property is deleted.
@@ -454,7 +460,7 @@ This method was added in version 0.52
 
 =over 4
 
-=item * C<propertyname>
+=item * B<propertyname>
 
 The property to get the value for
 
@@ -531,30 +537,30 @@ An analysis method for single character boundary and start/stop tokens
 
 =over 4
 
-=item * C<string>
+=item * B<string>
 
 The string to analyze
 
-=item * C<boundry_start>
+=item * B<boundry_start>
 
 The single character starting boundary separating wanted elements
 
-=item * C<boundry_stop>
+=item * B<boundry_stop>
 
 The single character stopping boundary separating wanted elements
 
-=item * C<tokens>
+=item * B<tokens>
 
 A { start_char => stop_char } hash reference of start/stop tokens.
 The characters in C<string> contained within a start_char and stop_char are not
 evaluated to match boundaries.
 
-=item * C<boundry_begin>
+=item * B<boundry_begin>
 
 Provide "1" if the beginning of the string should be treated as a 
 C<boundry_start> character.
 
-=item * C<boundry_end>
+=item * B<boundry_end>
 
 Provide "1" if the ending of the string should be treated as a C<boundry_stop>
 character.
@@ -627,14 +633,6 @@ sub charlexsplit (@) {
     push(@warns,'boundry_stop')     if !exists $args{'boundry_stop'};
     push(@warns,'tokens')           if !exists $args{'tokens'};
     if (@warns) { carp ('method charlexsplit(@) requires the arguments: '.join(', ',@warns).'.'); return undef; }
-    #my %args    =   validate ( @_,  {   string          => { type => SCALAR,   optional => 0 },
-    #                                    boundry_start   => { type => SCALAR,   optional => 0 },
-    #                                    boundry_stop    => { type => SCALAR,   optional => 0 },
-    #                                    tokens          => { type => ARRAYREF, optional => 0 },
-    #                                    boundry_begin   => { type => SCALAR,   optional => 1 },
-    #                                    boundry_end     => { type => SCALAR,   optional => 1 }
-    #                                }
-    #                         );
 
     my $string          = $args{'string'};        # The string to parse
     my $boundry_start   = $args{'boundry_start'}; # The boundary character separating wanted elements
@@ -750,7 +748,7 @@ evaluate has a value. So it is a test for existence of the element or attribute.
 
 =over 4
 
-=item * C<XMLPath>
+=item * B<XMLPath>
 
 The XML path to be parsed.
 
@@ -807,8 +805,7 @@ An array reference of array referenced elements of the XMLPath.
 #
 sub parseXMLPath ($) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 1) { carp 'method parseXMLPath($) requires one argument.'; return undef; }
-    #validate_pos( @_, 1);
+    unless (@_ == 1) { carp 'method parseXMLPath($) requires one argument.'; return undef; }
     my $path        = shift;
     my $hpath       = [];
     my ($tpp,$xml_text_id,$xml_attr_id);
@@ -904,7 +901,7 @@ This method was added in version 0.52
 
 =over 4
 
-=item * C<XMLDocument>
+=item * B<XMLDocument>
 
 The XML document tree, or subtree node to validate.
 This is an XML document either given as plain text string, or as parsed by the
@@ -939,9 +936,44 @@ The XMLSubTree would be validated as follows:
     $subtree{'-attribute'} eq "value"
     $subtree{'-attribute'}->{'value'} exists
 
-=item * C<XMLPath>
+=item * B<XMLPath>
 
 The path within the XML Tree to retrieve. See C<parseXMLPath()>
+
+=item * B<structure> => C<TargetRaw> | C<RootMAP> | C<ParentMAP>  (optional)
+
+This optional argument defines the format of the search results to be returned.
+The default structure is C<TargetRaw>
+
+TargetRaw - Return references to xml document fragments matching the XMLPath
+filter. If the matching xml document fragment is a string, then the string is
+returned as a non-reference.
+
+RootMap - Return a Map of the entire xml document, a result set (list) of the
+definitive XMLPath (mapped from the root) to the found targets, which includes:
+(1) a reference map from root (/) to all matching child nodes
+(2) a reference to the xml document from root (/)
+(3) a list of targets as absolute XMLPath strings for the matching child nodes
+
+    { root      => HASHREF,
+      path      => '/',
+      target    => [ "/nodename[#]/nodename[#]/nodename[#]/targetname" ],
+      child     =>
+        [{ name => nodename, position => #, child => [{
+            [{ name => nodename, position => #, child => [{
+                [{ name => nodename, position => #, target => targetname }]
+            }] }]
+        }] }]
+    }
+
+ParentMap - Return a Map of the entire xml document, which includes:
+(1) a reference map from each parent node to all matching child nodes
+(2) a reference to xml document fragments from the parent nodes
+
+    { root      => HASHREF,
+      path      => '/nodename[#]/nodename[#]',
+      child => [{ name => nodename, position => #, target => targetname }]
+    }
 
 =item * I<returns>
 
@@ -968,15 +1000,16 @@ You can retrieve the result set in one of two formats.
 
 =cut
 
-sub filterXMLDoc ($$) {
+sub filterXMLDoc (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 2) { carp 'method filterXMLDoc($$) requires two arguments.'; return undef; }
-    #validate_pos( @_, 1, 1);
+    unless (@_ >= 2) { carp 'method filterXMLDoc($$) requires two arguments.'; return undef; }
     my $tree        = shift || (carp 'filterXMLDoc($$) requires two arguments.' && return undef);
     my $path        = shift || (carp 'filterXMLDoc($$) requires two arguments.' && return undef);
+    my %options     = @_; # Additional optional options:
+                          # structure => TargetRaw | RootMAP | ParentMAP
+    my $o_structure = $options{'structure'} ? $options{'structure'} : "TargetRaw";
     my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id);
 
-    # Next 7 lines of code is considered for 0.57
     if ((defined $self) && (defined $self->get('tpp'))) {
         $tpp         = $self ? $self->tpp() : tpp();
         $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
@@ -985,27 +1018,22 @@ sub filterXMLDoc ($$) {
         $xml_text_id = '#text';
         $xml_attr_id = '-';
     }
-    # end 0.57 onsideration
-    if (ref $tree) { $xtree       = $tree;
-                     $xml_text_id = '#text';
-                     $xml_attr_id = '-';
+    if (ref $tree) { $xtree = $tree;
                    }
-              else { $tpp         = $self ? $self->tpp() : tpp();
-                     $xtree       = $tpp->parse($tree);
-                     $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
-                     $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+              else { if (!defined $tpp) { $tpp = $self ? $self->tpp() : tpp(); }
+                     $xtree = $tpp->parse($tree);
                    }
-    if (ref $path) { $xpath       = eval (pp($path)); # make a copy of inputted parsed XMLPath
+    if (ref $path) { $xpath = eval (pp($path)); # make a copy of inputted parsed XMLPath
                    }
-              else { $xpath       = parseXMLPath($path);
+              else { $xpath = parseXMLPath($path);
                    }
 
     # This is used on the lowest level of an element, and is the
     # execution of our rules for matching or validating a value
     my $validateFilter = sub (@) {
         my %args            = @_;
-        print ("="x8,"sub:filterXMLDoc|validateFilter->()\n") if $DEBUG;
-        print (" "x8,"= attempting to validate filter, with: ", pp(\%args) ,"\n") if $DEBUG;
+        print ("="x8,"sub:filterXMLDoc|validateFilter->()\n") if $DEBUG >= $DEBUGMETHOD;
+        print (" "x8,"= attempting to validate filter, with: ", pp(\%args) ,"\n") if $DEBUG >= $DEBUGDUMP;
         # we accept:
         # - required: node,param,comparevalue ; optional: operand(=) (= is default)
         # not accepted: - required: node,param,operand(exists)
@@ -1048,6 +1076,28 @@ sub filterXMLDoc ($$) {
         return 0;
     }; #end validateFilter->();
 
+    my $extractFilterPosition = sub (@) {
+        my $filters = shift;
+        my $position = undef;
+        # Process the first filter, if it exists, for positional testing
+        # If a positional argument is given, shift to the item located at
+        # that position
+        # Yes, this does mean the positional argument must be the first filter.
+        # But then again, this would not make clear sense: /books/book[author="smith"][5]
+        # And this path makes more clear sense: /books/book[5][author="smith"]
+        if ( (defined $filters)              &&
+             (defined $filters->[0])         &&
+             ($filters->[0]->[0] =~ /^\d*$/) &&
+             (! defined $filters->[0]->[1])  &&
+             ($filters->[0]->[0] >= 1) ) {
+            print (" "x12,"= processing list position filter. Extracting first filter.\n") if $DEBUG >= $DEBUGFILTER;
+            my $lpos         = shift @{$filters};  # This also deletes the positional filter from passed in filter REF
+            $position        = $lpos->[0]; # if $lpos >= 1;
+        }
+        return $position if defined $position && $position >= 1;
+        return undef;
+    };
+
     # So what do we support as filters
     # /books/book[@id="value"]      # attribute eq value
     # /books/book[title="value"]    # element eq value
@@ -1058,20 +1108,24 @@ sub filterXMLDoc ($$) {
     # /books/book[publisher/address[country="US"]/city="value"]   # sub/child element eq value based on another filter
     # /books/book[5][./title=../book[4]/title]  # comparing the values of two elements
     my $processFilters = sub ($$) {
-        print ("="x8,"sub:filterXMLDoc|processFilters->()\n") if $DEBUG;
+        print ("="x8,"sub:filterXMLDoc|processFilters->()\n") if $DEBUG >= $DEBUGMETHOD;
         my $xmltree_child           = shift;
         my $filters                 = shift;
         my $filters_processed_count = 0; # Will catch a filters error of [[][][]] or something
         my $param_match_flag        = 0;
+        if ((!defined $filters) || (@{$filters} == 0)) {
+            # If !defined $filters or if $filters = []
+            return $xmltree_child;
+        }
         FILTER: foreach my $filter (@{$filters}) {
             next if !defined $filter; # if we get empty filters;
             $filters_processed_count++;
 
             my $param = $filter->[0];
             my $value = $filter->[1];
-            print (" "x8,"= processing filter: " . $param) if $DEBUG;
-            print (" , " . $value) if defined $value && $DEBUG;
-            print ("\n") if $DEBUG;
+            print (" "x8,"= processing filter: " . $param) if $DEBUG >= $DEBUGFILTER;
+            print (" , " . $value) if defined $value && $DEBUG >= $DEBUGFILTER;
+            print ("\n") if $DEBUG >= $DEBUGFILTER;
 
             # attribute/element exists filter
             # deal with special #text/$xml_text_id element
@@ -1094,13 +1148,13 @@ sub filterXMLDoc ($$) {
                 last FILTER;
             }
 
-            print (" "x12,"= about to validate filter.\n") if $DEBUG;
+            print (" "x12,"= about to validate filter.\n") if $DEBUG >= $DEBUGFILTER;
             if (     ($param ne ".") &&
                      ($validateFilter->( node => $xmltree_child->{$param},
                                       operand => '=',
                                  comparevalue => $value))
                 ) {
-                print (" "x12,"= validated filter.\n") if $DEBUG;
+                print (" "x12,"= validated filter.\n") if $DEBUG >= $DEBUGFILTER;
                 $param_match_flag = 1;
                 next FILTER;
             } elsif (($param eq ".") &&
@@ -1108,11 +1162,11 @@ sub filterXMLDoc ($$) {
                                       operand => '=',
                                  comparevalue => $value))
                 ) {
-                print (" "x12,"= validated filter.\n") if $DEBUG;
+                print (" "x12,"= validated filter.\n") if $DEBUG >= $DEBUGFILTER;
                 $param_match_flag = 1;
                 next FILTER;
             } else {
-                print (" "x12,"= unvalidated filter.\n") if $DEBUG;
+                print (" "x12,"= unvalidated filter.\n") if $DEBUG >= $DEBUGFILTER;
                 $param_match_flag = 0;
                 last FILTER;
             }
@@ -1151,152 +1205,421 @@ sub filterXMLDoc ($$) {
         }
     }; #end processFilters->()
 
+    # mapAssemble(), mapChildExists() and mapTran() are utilized for the ParentMap and RootMap options
+    my $mapAssemble = sub (@) {};
+    $mapAssemble = sub (@) {
+        my $mapObj = shift;
+        my $rootpath = $_[0] || $mapObj->{'path'} || '/';
+        $rootpath .= '/' if $rootpath !~ /\/$/;
+        my @paths;
+        foreach my $child (@{$mapObj->{'child'}}) {
+            my $tmppath .= ($rootpath.$child->{'name'}."[".$child->{'position'}."]");
+            if (exists $child->{'child'}) {
+                my $rpaths = $mapAssemble->($child,$tmppath);
+                if (ref($rpaths) eq "ARRAY") {
+                    push(@paths,@{$rpaths});
+                } else {
+                    push(@paths,$rpaths);
+                }
+            } elsif (exists $child->{'target'}) {
+                if (defined $child->{'target'}) {
+                    $tmppath .= ("/".$child->{'target'});
+                }
+                push(@paths,$tmppath);                
+            }
+        }
+        return \@paths;
+    };
+    # mapAssemble(), mapChildExists() and mapTran() are utilized for the ParentMap and RootMap options
+    my $mapChildExists = sub (@) {
+        my $mapObj  = shift;
+        my $child   = shift;
+        foreach my $cmap (@{$mapObj->{'child'}}) {
+            if (   ($cmap->{'name'} eq $child->{'name'})
+                && ($cmap->{'position'} eq $child->{'position'})) {
+                return $cmap;
+            }
+        }
+        return 0;
+    };
+    # mapAssemble(), mapChildExists() and mapTran() are utilized for the ParentMap and RootMap options
+    my $mapTran = sub (@) {};
+    $mapTran = sub (@) {
+        my $mapObj  = shift;
+        my %args    = @_;   # action => new | assemble | child => { name => S, position => #, target => S }
+        if (! defined $mapObj) {
+            if ((exists $args{'action'}) && ($args{'action'} eq "new")) {
+                $mapObj = {};
+                return ($mapObj);
+            } else {
+                return undef;
+            }
+        }
+        if ((exists $args{'action'}) && ($args{'action'} eq "childcount")) {
+            return (ref($mapObj->{'child'}) eq "ARRAY") ? @{$mapObj->{'child'}} : 0;
+        }
+        if (exists $args{'child'}) {  # && (exists $args{'child'}->{'name'}) && (exists $args{'child'}->{'position'})) {
+            $mapObj->{'child'} = [] if ref($mapObj->{'child'}) ne "ARRAY";
+            my $newchild = $args{'child'};
+            if (my $cmap = $mapChildExists->($mapObj,$newchild)) {
+                # If the child already exists, try to merge the two childs.
+                # merging will attempt to add the child's child(s) to the mapObj's child if the child's child(s) do not already exist.
+                if (ref($newchild->{'child'}) eq "ARRAY") {
+                    foreach my $nc_child (@{$newchild->{'child'}}) {
+                        if ($mapTran->($cmap, child => $nc_child)) {
+                            return $newchild;
+                        }
+                    }
+                } else {
+                    return undef;
+                }
+            } else {
+                # Add the child if it does not already exist
+                push (@{$mapObj->{'child'}}, $newchild);
+                return $newchild;
+            }
+        }
+        if ((exists $args{'action'}) && ($args{'action'} eq "assemble")) {
+            return $mapAssemble->("",$mapObj);
+        }
+    };
+
+    # whatisnode() looks at the nodename to determine what it is
+    my $whatisnode = sub ($) {
+        my $nodename = shift;
+        return undef        if ref($nodename);
+        return "text"       if $nodename eq $xml_text_id;
+        return "attribute"  if $nodename =~ /^$xml_attr_id\w+$/;
+        return "parent"     if $nodename eq '..';
+        return "current"    if $nodename eq '.';
+        return "element";
+    };
+
+    # bctrail() is the breadcrumb trail, so we can find our way back to the root node
+    my $bctrail = sub (@) {
+        my $bcobj   = shift || return undef;
+        my $action  = shift || return undef;
+        if ($action eq "addnode") {
+            push(@{$bcobj},@_);
+            return 1;
+        } elsif ($action eq "poplast") {
+            my $j = pop(@{$bcobj});
+            return $j;
+        } elsif ($action eq "clone") {
+            my @clone;
+            foreach my $noderef (@{$bcobj}) {
+                push(@clone,$noderef);
+            }
+            return \@clone;
+        } elsif ($action eq "length") {
+            my $num = @{$bcobj};
+            return $num;
+        }
+        return undef;
+    };
+
+    # find() is the primary searching function
     my $find = sub (@) {};
     $find = sub (@) {
         my $xmltree         = shift;  # The parsed XML::TreePP tree
         my $xmlpath         = shift;  # The parsed XML::TreePP::XMLPath path
-        my $xmltree_parent  = shift || undef;
-        print ("="x8,"sub::filterXMLDoc|_find()\n") if $DEBUG;
-        print (" "x8,"= attempting to find path: ", pp($xmlpath) ,"\n") if $DEBUG;
-        print (" "x8,"= attempting to search in: ", pp($xmltree) ,"\n") if $DEBUG;
+        my $thisnodemap     = shift || undef;
+        my $breadcrumb      = shift || [];
+        print ("="x8,"sub::filterXMLDoc|_find()\n") if $DEBUG >= $DEBUGMETHOD;
+        print (" "x7,"=attempting to find path: ", pp($xmlpath) ,"\n") if $DEBUG >= $DEBUGDUMP;
+        print (" "x7,"=attempting to search in: ", pp($xmltree) ,"\n") if $DEBUG >= $DEBUGDUMP;
+        if (($DEBUG >= 1) && ($DEBUG <= 5)) {
+            print ( "-"x11 . "# Descending in search with criteria: " . "\n");
+            print ( pp({ nodemap => $thisnodemap }) . "\n");
+            print ( pp({ xmlpath => $xmlpath }) . "\n");
+            print ( pp({ xmlfragment => $xmltree }) . "\n");
+        }
 
+        #print (" "x8, "searching begins on node with nodemap:", pp ($thisnodemap) if $DEBUG > 5;
         # If there are no more path to analyze, return
         if ((ref($xmlpath) ne "ARRAY") || (! @{$xmlpath} >= 1)) {
-            print (" "x8,"= end of path reached\n") if $DEBUG;
+            print (" "x12,"= end of path reached\n") if $DEBUG >= $DEBUGPATH;
+            # FOUND: XMLPath is satisfied, Return $xmltree as a found target
+            $thisnodemap->{'target'} = undef;
             return $xmltree;
         }
 
-        my @found;
-        # First determine if we are analyzing one of three possible formats of
-        # the current context:
-        # HASH ref   - $xmltree = {}
-        # ARRAY ref  - $xmltree = []
-        # SCALAR ref - ${$xmltree} =~ /\w/
-        # SCALAR     - $xmltree =~ /\w/
-        if (ref $xmltree eq "HASH") {
-            print (" "x12,"= search tree is HASH\n") if $DEBUG;
+        # Otherwise, we have more path to analyze - @{$xmlpath} is >= 1
+
+        my (@found,@maps);
+        if (! ref($xmltree)) {
+            print ("-"x12,"= search tree is TEXT (non-REF)\n") if $DEBUG >= $DEBUGPATH;
+            # This should almost always return undef
+            # The only exception is if $element eq '.', as in "/path/to/element/."
+
             my $path_element    = shift @{$xmlpath};
             my $element         = shift @{$path_element};
             my $filters         = shift @{$path_element};
-            my $xmltree_context = $xmltree;
-            my $xmltree_child;
 
-            # xmltree_context is the current node we are evaluating
-            # xmltree_child is the next node we are going to descend to
-            # xmltree_parent is the node we just descended from, or the xmltree_context of the caller $find->()
-
-            # Do not continue if the desired element in the path does not exist
-            # But if the element refers to an existing subtree, current context,
-            # or the parent, lets deal with it
-            print (" "x12,"= processing element ".$element."\n") if $DEBUG;
-            if ((defined $element) && ($element eq '..')) {
-                if (defined $xmltree_parent) {
-                    $xmltree_context = $xmltree_parent;
-                    $xmltree_parent = undef;
-                }
-            } elsif ((defined $element) && ($element eq '.')) {
-                $xmltree_child = $xmltree_context;
-            } elsif ((defined $element) && (!exists $xmltree_context->{$element})) {
+            my $elementposition = $extractFilterPosition->($filters);
+            if ( (($element =~ /\w+/) && ($element ne '.')) || ((defined $elementposition) && (! $elementposition >= 2)) ) {
                 return undef;
-            } elsif ((defined $element) && (exists $xmltree_context->{$element})) {
-                $xmltree_child = $xmltree_context->{$element};
             }
-
-            # Process the first filter, if it exists, for positional testing
-            # If a positional argument is given, shift to the item located at
-            # that position
-            # Yes, this does mean the positional argument must be the first filter.
-            # But then again, this would not make clear sense: /books/book[author="smith"][5]
-            # And this path makes more clear sense: /books/book[5][author="smith"]
-            if ( (defined $filters)              &&
-                 (defined $filters->[0])         &&
-                 ($filters->[0]->[0] =~ /^\d*$/) &&
-                 (! defined $filters->[0]->[1])  &&
-                 ($filters->[0]->[0] >= 1) ) {
-                print (" "x12,"= processing list position filter.\n") if $DEBUG;
-                my $lpos            = shift @{$filters};
-                my $position        = $lpos->[0]; # if $lpos >= 1;
-                # context must be multi-valued foo positional arguments to work.
-                # but we make the exception if the positional argument is "1"
-                # which we interpret as the current single context item
-                if (($position > 1) && (ref($xmltree_child) ne "ARRAY")) {
-                    return undef;
-                } elsif (ref($xmltree_child) eq "ARRAY") {
-                    print (" "x12,"= looking up position ",$position,"\n") if $DEBUG;
-                    # Should I instead check first?
-                    # return undef if $position > @{$xmltree_child};
-                    $xmltree_child  = $xmltree_child->[($position - 1)] || return undef;
-                }
-            }
-
-            if ((!defined $filters) || (@{$filters} < 1)) {
-                print (" "x12,"= no more filters.\n") if $DEBUG;
-                # If there are no more filters to process, we descend
-                return $find->($xmltree_child,$xmlpath,$xmltree_context);
-            } else {
-                print (" "x12,"= processing remaining filters.\n") if $DEBUG;
-                # If more filters, process each of them
-
-
-                # There is only one possible match with filters against a node,
-                # because of the limitation of filters we accept.
-                # This will change if we accept filters similar to something like this:
-                # /books/book[@id > 5]  # any book with attribute id value greater than 5
-                # /books/book[author="*smith*"]  # any book with element author containing "smith"
-
-                if (ref($xmltree_child) eq "ARRAY") {
-                    my @xmltrees;
-                    foreach my $sub (@{$xmltree_child}) {
-                    print (" "x12,"= search tree descendant is ARRAY.\n") if $DEBUG;
-                        # First make a copy of the $filters to pass in
-                        my $tmpfilters = eval ( pp($filters) );
-                        my $vtree = $processFilters->($sub,$tmpfilters);
-                        push (@xmltrees, $vtree) if defined $vtree;
-                    }
-                    if (@xmltrees >= 1) {
-                        return $find->(\@xmltrees,$xmlpath,$xmltree_context);
-                    }
-                } else {
-                    print (" "x12,"= search tree descendant is NOT ARRAY.\n") if $DEBUG;
-                    my $vtree = $processFilters->($xmltree_child,$filters);
-                    # filters were processed with matches
-                    if (defined $vtree) {
-                        return $find->($xmltree_child,$xmlpath,$xmltree_context);
-                    }
-                }
+            if (@{$xmlpath} >= 1) {
                 return undef;
             }
 
+            if (    ((!defined $filters) || (@{$filters} < 1))
+                 || (( $processFilters->($xmltree,$filters) ))   ) {
+                push(@found,$xmltree);
+            }
         } elsif (ref $xmltree eq "ARRAY") {
-            print (" "x12 , "= search tree is ARRAY\n") if $DEBUG;
-            foreach my $sub (@{$xmltree}) {
-                # First make a copy of the $xmlpath to pass in
-                my $tmpxmlpath = eval ( pp($xmlpath) );
-                my $xmltree_tmp = $find->($sub,$tmpxmlpath);
-                if (ref $xmltree_tmp eq "ARRAY") {
-                    print (" "x12,"= search tree result is ARRAY\n") if $DEBUG;
-                    foreach my $xt (@{$xmltree_tmp}) {
-                        push (@found,$xt) if defined $xt;
-                    }
+            print ("-"x12,"= search tree is ARRAY\n") if $DEBUG >= $DEBUGPATH;
+            # If $xmltree is an array, and not a HASH, then we are not searching
+            # an XML::TreePP parsed XML Document, so we just keep descending
+            # Instead, this tree might look something like:
+            # { parent=>[ {child1=> CDATA},{child2=>[["v1","v2","v3"],["vA","vB","vC"]]} ] }
+            # A normal expected XML::TreePP tree will not have arrays of arrays
+            foreach my $singlexmltree (@{$xmltree}) {
+                my $bc_clone = $bctrail->($breadcrumb,"clone"); # do not addnode $xmltree, because ref $xmltree eq ARRAY
+                my $result = $find->($singlexmltree,$xmlpath,$thisnodemap,$bc_clone);
+                next unless defined $result;
+                push(@found,@{$result}) if ref($result) eq "ARRAY";
+                push(@found,$result) if ref($result) ne "ARRAY";
+            }
+        } elsif (ref $xmltree eq "HASH") {
+            print ("-"x12,"= search tree is HASH\n") if $DEBUG >= $DEBUGPATH;
+            # Pretty much all the searching is done here
+
+            my $path_element    = shift @{$xmlpath};
+            my $element         = shift @{$path_element};
+            my $filters         = shift @{$path_element};
+
+            my $elementposition = $extractFilterPosition->($filters);
+
+            my $result;
+            my $nodetype = $whatisnode->($element);
+            if ($nodetype eq "text") {
+                print ("-"x12,"= search tree node (".$element.") is text\n") if $DEBUG >= $DEBUGNODE;
+                # Filters are not allowed in text elements directly
+                # Alt is to give: '/path/to/sub[#text="my value"]/#text
+                # However, perhaps we should allow: '/path/to/sub/#text[.="my value"]
+                return undef if (@{$xmlpath} >= 1); # Cannot descend as path dictates, so no match
+                return undef if defined $elementposition && $elementposition >= 2; # There is only one child node
+                print (" "x8,"= end of path reached with text CDATA\n") if $DEBUG > 1;
+                if (( $processFilters->($xmltree->{$element},$filters) )) {
+                    $thisnodemap->{'target'} = $element;  # $element eq '#text'
+                    $result = $xmltree->{$element};
                 } else {
-                    print (" "x12,"= search tree result is NOT ARRAY\n") if $DEBUG;
-                    push (@found,$xmltree_tmp) if defined $xmltree_tmp;
+                    print ("-"x12,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    return undef;
+                }
+            } elsif ($nodetype eq "attribute") {
+                print ("-"x12,"= search tree node (".$element.") is sttribute\n") if $DEBUG >= $DEBUGNODE;
+                # Filters are not allowed on attribute elements directly
+                # Alt is to give: '/path/to/sub[@attrname="my value"]/@attrname
+                # However, perhaps we should allow: '/path/to/sub/@attrname[.="my value"]
+                return undef if (@{$xmlpath} >= 1); # Cannot descend as path dictates, so no match
+                return undef if defined $elementposition && $elementposition >= 2; # There is only one child node
+                print (" "x8,"= end of path reached with attribute\n") if $DEBUG >= $DEBUGPATH;
+                if (( $processFilters->($xmltree->{$element},$filters) )) {
+                    $thisnodemap->{'target'} = $element;
+                    $result = $xmltree->{$element};
+                } else {
+                    print ("-"x12,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    return undef;
+                }
+            } elsif (($nodetype eq "element") && (! ref($xmltree->{$element})) ) {
+                print ("-"x12,"= search tree node (".$element.") is element with text CDATA\n") if $DEBUG >= $DEBUGNODE;
+                # Here must take care of matching the abscence of #text
+                # eg: /path/to/element == /path/to/element/#text if element =~ /\w+/
+                unless (   (defined $xmltree->{$element}) && ($xmltree->{$element} =~ /\w+/)
+                        && (   ((ref($xmlpath) eq "ARRAY") && (@{$xmlpath} == 1))
+                            && ($whatisnode->($xmlpath->[0]->[0]) eq "text") 
+                            && ($processFilters->($xmltree->{$element},$xmlpath->[0]->[1])) ) ) {
+                    return undef if (@{$xmlpath} >= 1); # Cannot descend as path dictates, so no match
+                    return undef if defined $elementposition && $elementposition >= 2; # There is only one child node
+                }
+                print ("-"x16,"60= nodetype is element with text on final path\n") if $DEBUG >= $DEBUGNODE;
+                if (( $processFilters->($xmltree->{$element},$filters) )) {
+                    my $childmap = { name => $element, position => 1, target => undef };
+                    $mapTran->($thisnodemap, child => $childmap );
+                    $result = $xmltree->{$element};
+                } else {
+                    print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    return undef;
+                }
+            } elsif ($nodetype eq "parent") {
+                print ("-"x12,"= search tree node (".$element.") is parent node\n") if $DEBUG >= $DEBUGNODE;
+                return undef if defined $elementposition && $elementposition >= 2; # This is not supported, as parent (..) is the parent hash, not array
+                my $crumb      = $bctrail->($breadcrumb,"poplast"); # get the parent from the end of the breadcrumb trail
+                my $parentnode = $crumb->[0];
+                my $parentmap  = $crumb->[1];
+                return undef unless defined $parentnode;
+                if ( $processFilters->($parentnode,$filters) ) {
+                    # If there were no filters, path was something like '/path/to/../element'
+                    # If there were filters, path was something like '/path/to/..[filter]/element'
+                    $result = $find->($parentnode,$xmlpath,$parentmap,$breadcrumb);
+                } else {
+                    print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    return undef;
+                }
+            } elsif ($nodetype eq "current") {
+                print ("-"x12,"= search tree node (".$element.") is current node\n") if $DEBUG >= $DEBUGNODE;
+                return undef if defined $elementposition && $elementposition >= 2; # The current node is always a hash
+                if ( $processFilters->($xmltree,$filters) ) {
+                    # If there were no filters, path was something like '/path/to/./element'
+                    # If there were filters, path was something like '/path/to/.[filter]/element'
+                    $result = $find->($xmltree,$xmlpath,$thisnodemap,$breadcrumb);
+                } else {
+                    print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    return undef;
+                }
+            } elsif ($nodetype eq "element") {
+                print ("-"x12,"= search tree node (".$element.") is element with REF\n") if $DEBUG >= $DEBUGNODE;
+                if ( ref($xmltree->{$element}) eq "HASH" ) {
+                    print ("-"x16,"= search tree node (".$element.") is element with REF HASH\n") if $DEBUG >= $DEBUGNODE;
+                    return undef if defined $elementposition && $elementposition >= 2; # There is only one child node, as a hash
+                    if ( $processFilters->($xmltree->{$element},$filters) ) {
+                        my $childmap = { name => $element, position => 1 };
+                        $bctrail->($breadcrumb,"addnode",[$xmltree,$thisnodemap]);
+                        $result = $find->($xmltree->{$element},$xmlpath,$childmap,$breadcrumb);
+                        $bctrail->($breadcrumb,"poplast");
+                        if (defined $result) {
+                            $mapTran->($thisnodemap, child => $childmap );
+                        }
+                    } else {
+                        print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                        return undef;
+                    }
+                } elsif (( ref($xmltree->{$element}) eq "ARRAY" ) && (defined $elementposition) && ($elementposition >= 1)) {
+                    print ("-"x16,"= search tree node (".$element.") is element with REF ARRAY position $elementposition\n") if $DEBUG >= $DEBUGNODE;
+                    if ( $processFilters->($xmltree->{$element},$filters) ) {
+                        my $childmap = { name => $element, position => $elementposition };
+                        $bctrail->($breadcrumb,"addnode",[$xmltree,$thisnodemap]);
+                        $result = $find->($xmltree->{$element}->[($elementposition - 1)],$xmlpath,$childmap,$breadcrumb);
+                        $bctrail->($breadcrumb,"poplast");
+                        if (defined $result) {
+                            $mapTran->($thisnodemap, child => $childmap );
+                        }
+                    } else {
+                        print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                        return undef;
+                    }
+                } elsif ( ref($xmltree->{$element}) eq "ARRAY" ) {
+                    print ("-"x16,"= search tree node (".$element.") is element with REF ARRAY\n") if $DEBUG >= $DEBUGNODE;
+                    my $xmlpos = 0;
+                    $bctrail->($breadcrumb,"addnode",[$xmltree,$thisnodemap]);
+                    foreach my $sub (@{$xmltree->{$element}}) {
+                        # print (" "x20, "filtering child node:", pp({ sub => $sub, target => $xmlpath->[0]->[0] }) if $DEBUG > 5;
+                        $xmlpos++;
+                        my ($mresult,$childmap);
+                        my $tmpfilters = eval( pp($filters) );
+                        my $tmpxmlpath = eval( pp($xmlpath) );
+                        my ($bc_clone);
+                        if (   ((!ref($sub)) && ($sub =~ /\w+/))
+                            && (   ((ref($xmlpath) eq "ARRAY") && (@{$xmlpath} == 1))
+                                && ($whatisnode->($xmlpath->[0]->[0]) eq "text") 
+                                && ($processFilters->($sub,$tmpxmlpath->[0]->[1])) ) ) {
+                            $childmap = { name => $element, position => $xmlpos, target => undef };
+                            $mresult = $xmltree->{$element}->[($xmlpos - 1)];
+                        } elsif ( $processFilters->($sub,$tmpfilters) ) {
+                            print ("-"x16,"= node at position ".$xmlpos." passed filters.\n") if $DEBUG >= $DEBUGNODE;
+                            $childmap = { name => $element, position => $xmlpos };
+                            $bc_clone = $bctrail->($breadcrumb,"clone");
+                            $mresult = $find->($sub,$tmpxmlpath,$childmap,$bc_clone);
+                        } else {
+                            print ("-"x16,"= node at position ".$xmlpos." did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                            next;
+                        }
+                        if (defined $mresult) {
+                            push(@{$result},@{$mresult}) if ref($mresult) eq "ARRAY";
+                            push(@{$result},$mresult) if ref($mresult) ne "ARRAY";
+                            $mapTran->($thisnodemap, child => $childmap );
+                        }
+                    }
+                    $bctrail->($breadcrumb,"poplast");
+                } else {
+                    print ("-"x12,"= search tree node (".$element.") is element with REF but is not REF ARRAY or HASH\n") if $DEBUG >= $DEBUGNODE;
                 }
             }
-            return \@found;
-        } elsif (ref $xmltree eq "SCALAR") {
-            # We have more path to analyze, but no more depth to our xml doc
-            # do not - push (@found,${$xmltree});
-            # do nothing
-        } else {  # subtree is text, or some other unrecognized reference
-            # We have more path to analyze, but no more depth to our xml doc
-            # do not - push (@found,$xmltree);
-            # do nothing
+
+            if (ref($result) eq "ARRAY") {
+                push(@found,@{$result}) unless @{$result} == 0;
+            } else {
+                push(@found,$result) unless !defined $result;
+            }
         }
-        return undef;  # $xmltree is unrecognized
+        #print (" "x8, "searching ended on node with nodemap:", pp ($thisnodemap) if $DEBUG > 5;
+        return undef if @found == 0;
+        return \@found;
     }; # end find->()
 
-    my $found = $find->($xtree,$xpath,$xtree);
+    # pathsplit() takes a parsed XML::TreePP::XMLPath, and splits it into two
+    # XML::TreePP::XMLPath paths. The path to the parent node and the path to
+    # the child node. The child XML::TreePP::XMLPath is the path to the child
+    # node plus the target, and including any filters.
+    # ( $parent, ($child ."/". $target) ) = $pathsplit->(parsed XML::TreePP::XMLPath)
+    my $pathsplit = sub ($) {
+        my $parent_path = shift;
+        $parent_path = eval(pp($parent_path));
+        my ($child_path,$string_element); # string_element is #text or @attribute if exists in path
+        if (   ($whatisnode->($parent_path->[ (@{$parent_path}-1) ]->[0]) eq "text")
+            || ($whatisnode->($parent_path->[ (@{$parent_path}-1) ]->[0]) eq "attribute") ) {
+            unshift( @{$child_path}, pop @{$parent_path} ); # $parent_path becomes just the <node> without #text/@attr
+            unshift( @{$child_path}, pop @{$parent_path} ); # $parent_path becomes the parent <node>
+        } else {
+            # whatis eq element
+            unshift( @{$child_path}, pop @{$parent_path} ); # $parent_path becomes the parent <node>
+        }
+        return ($parent_path,$child_path);
+    };
+
+    # structure => TargetRaw | RootMAP | ParentMAP
+    my ($found,$thismap);
+    if ($o_structure =~ /^RootMap$/i) {
+        $thismap = { root => $xtree, path => '/' };         # the root map
+        if (($DEBUG >= 1) && ($DEBUG <= 5)) {
+            print ("-"x11,"# Searching for the path within the root node." . "\n");
+        }
+        $found = $find->($xtree,$xpath,$thismap);           # results from searching root
+        $thismap->{'target'} = $mapAssemble->($thismap);    # assemble the absolute XMLPaths to all targets
+        return undef if ! defined $thismap;
+    } elsif ($o_structure =~ /^ParentMap$/i) {
+        my ($p_xpath,$c_xpath) = $pathsplit->($xpath);      # split XMLPath into parent node and child node paths
+        my $rootmap = { root => $xtree, path => '/' };      # the root map
+        if (($DEBUG >= 1) && ($DEBUG <= 5)) {
+            print ("-"x11,"# Searching for the parent path within the root node." . "\n");
+        }
+        my $p_found = $find->($xtree,$p_xpath,$rootmap);    # results from searching root
+        my $p_path = $mapAssemble->($rootmap);              # assemble the absolute XMLPaths to all targets to parent nodes
+        foreach my $p_xtree (@{$p_found}) {                 # search each parent xml document fragment for its child nodes
+            my $parentmap = { root => $p_xtree, path => (shift(@{$p_path})) };  # create the map for the parent node
+            my $tmpc_xpath = eval(pp($c_xpath));                                # make a copy of the child XMLPath
+            if (($DEBUG >= 1) && ($DEBUG <= 5)) {
+                print ("-"x11,"# Searching for the child path within the parent node." . "\n");
+            }
+            my $c_found = $find->($p_xtree,$tmpc_xpath,$parentmap);             # results from searching parent
+            next if !defined $c_found;
+            push(@{$found},@{$c_found}) if ref($c_found) eq "ARRAY";
+            push(@{$found},$c_found) if ref($c_found) ne "ARRAY";
+            push(@{$thismap},$parentmap);
+        }
+    } else {
+        $thismap = undef;
+        $found = $find->($xtree,$xpath);
+    }
+
+    if (($DEBUG >= 1) && ($DEBUG <= 5)) {
+        print ("-"x11,"# Search yielded results." . "\n") if defined $thismap || defined $found;
+    }
+    if (($DEBUG) && (defined $thismap)) {
+        print pp { structure => $o_structure, thismap => $thismap };
+    } elsif (($DEBUG) && (defined $found)) {
+        print pp { structure => $o_structure, results => $found };
+    }
+
+    if (($o_structure =~ /^RootMap$/i) || ($o_structure =~ /^ParentMap$/i)) {
+        $thismap = [$thismap] if ref $thismap ne "ARRAY";
+        return undef if (! defined $thismap || @{$thismap} == 0) && !defined wantarray;
+        return (@{$thismap}) if !defined wantarray;
+        return wantarray ? @{$thismap} : $thismap;
+    }
     return undef if ! defined $found;
     $found = [$found] if ref $found ne "ARRAY";
     return undef if (! defined $found || @{$found} == 0) && !defined wantarray;
@@ -1315,27 +1638,27 @@ This method was added in version 0.53 as getValue, and changed to getValues in 0
 
 =over 4
 
-=item * C<XMLDocument>
+=item * B<XMLDocument>
 
 The XML Document to search and return values from.
 
-=item * C<XMLPath>
+=item * B<XMLPath>
 
 The XMLPath to retrieve the values from.
 
-=item * C<valstring => 1|0>
+=item * B<valstring> => C<1> | C<0>
 
 Return values that are strings. (default is 1)
 
-=item * C<valxml => 1|0>
+=item * B<valxml> => C<1> | C<0>
 
 Return values that are xml, as raw xml. (default is 0)
 
-=item * C<valxmlparsed => 1|0>
+=item * B<valxmlparsed> => C<1> | C<0>
 
 Return values that are xml, as parsed xml. (default is 0)
 
-=item * C<valtrim => 1|0>
+=item * B<valtrim> => C<1> | C<0>
 
 Trim off the white space at the beginning and end of each value in the result
 set before returning the result set. (default is 0)
@@ -1362,8 +1685,7 @@ Returns the values from the XML Document found at the XMLPath.
 
 sub getValues (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ < 2) { carp 'method getValues(@) requires at least two arguments.'; return undef; }
-    #validate_pos( @_, 1, 1);
+    unless (@_ >= 2) { carp 'method getValues(@) requires at least two arguments.'; return undef; }
     my $tree        = shift;
     my $path        = shift;
     # Supported arguments:
@@ -1384,7 +1706,6 @@ sub getValues (@) {
 
     my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id,$old_prop_xml_decl);
 
-    # Next 7 lines of code is considered for 0.57
     if ((defined $self) && (defined $self->get('tpp'))) {
         $tpp         = $self ? $self->tpp() : tpp();
         $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
@@ -1393,20 +1714,16 @@ sub getValues (@) {
         $xml_text_id = '#text';
         $xml_attr_id = '-';
     }
-    # end 0.57 onsideration
-    if (ref $tree) { $xtree       = $tree;
-                     $xml_text_id = '#text';
-                     $xml_attr_id = '-';
+    if (ref $tree) { $xtree = $tree;
                    }
-              else { $tpp         = $self ? $self->tpp() : tpp();
-                     $xtree       = $tpp->parse($tree);
-                     $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
-                     $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+              else { if (!defined $tpp) { $tpp = $self ? $self->tpp() : tpp(); }
+                     $xtree = $tpp->parse($tree);
                    }
-    if (ref $path) { $xpath       = $path;
+    if (ref $path) { $xpath = eval (pp($path)); # make a copy of inputted parsed XMLPath
                    }
-              else { $xpath       = parseXMLPath($path);
+              else { $xpath = parseXMLPath($path);
                    }
+
     if ($v_ret_type =~ /x/) {
         if (ref($tpp) ne "XML::TreePP") {
             $tpp = $self ? $self->tpp() : tpp();
@@ -1416,22 +1733,22 @@ sub getValues (@) {
         $tpp->set( xml_decl => '' );
     }
 
-    print ("="x8,"sub::getValues()\n") if $DEBUG;
-    print (" "x8, "=called with return type: ",$v_ret_type,"\n") if $DEBUG;
-    print (" "x8, "=called with path: ",pp($xpath),"\n") if $DEBUG;
+    print ("="x8,"sub::getValues()\n") if $DEBUG >= $DEBUGMETHOD;
+    print (" "x8, "=called with return type: ",$v_ret_type,"\n") if $DEBUG >= $DEBUGMETHOD;
+    print (" "x8, "=called with path: ",pp($xpath),"\n") if $DEBUG >= $DEBUGPATH;
 
     # Retrieve the sub tree of the XML document at path
     my $results = filterXMLDoc($xtree, $xpath);
 
     # for debugging purposes
-    print (" "x8, "=Found at var's path: ", pp( $results ),"\n") if $DEBUG;
+    print (" "x8, "=Found at var's path: ", pp( $results ),"\n") if $DEBUG >= $DEBUGDUMP;
 
     my $getVal = sub ($) {};
     $getVal = sub ($) {
-        print ("="x8,"sub::getValues|getVal->()\n") if $DEBUG;
+        print ("="x8,"sub::getValues|getVal->()\n") if $DEBUG >= $DEBUGMETHOD;
         my $treeNodes = shift;
-        print (" "x8,"getVal-from> ",pp($treeNodes)) if $DEBUG;
-        print (" - '",ref($treeNodes)||'string',"'\n") if $DEBUG;
+        print (" "x8,"getVal->():from> ",pp($treeNodes)) if $DEBUG >= $DEBUGDUMP;
+        print (" - '",ref($treeNodes)||'string',"'\n") if $DEBUG >= $DEBUGDUMP;
         my @results;
         if (ref($treeNodes) eq "HASH") {
             my $utreeNodes = eval ( pp($treeNodes) ); # make a copy for the result set
@@ -1462,10 +1779,10 @@ sub getValues (@) {
     if ($v_trim) {
         my $i=0;
         while($i < @{$found}) {
-            print ("        =trimmimg result (".$i."): '",$found->[$i],"'") if $DEBUG;
+            print ("        =trimmimg result (".$i."): '",$found->[$i],"'") if $DEBUG >= $DEBUGDUMP;
             $found->[$i] =~ s/\s*$//g;
             $found->[$i] =~ s/^\s*//g;
-            print (" to '",$found->[$i],"'\n") if $DEBUG;
+            print (" to '",$found->[$i],"'\n") if $DEBUG >= $DEBUGDUMP;
             $i++;
         }
     }
@@ -1489,7 +1806,7 @@ an attribute matches a value.
 
 =over 4
 
-=item * C<XMLSubTree>
+=item * B<XMLSubTree>
 
 The XML tree, or subtree, (element) to validate.
 This is an XML document parsed by the XML::TreePP->parse() method.
@@ -1508,7 +1825,7 @@ The XMLSubTree would be validated as follows:
     $subtree{'attribute'}->{'value'} exists
     returning: $subtree if valid
 
-=item * C<params>
+=item * B<params>
 
 Validate the element having an attribute matching value in this current
 XMLSubTree position
@@ -1540,7 +1857,7 @@ The subtree that is validated, or undef if not validated
     # the single period (.) which identifies the immediate root of the
     # XML Document (or a XML Document node you provide instead).
     # If $XMLTree can be either plain text or a XML::TreePP parsed XML Document
-    my $result = filterXMLDoc( $XMLTree, '[.[element="value"][@attribute="value"]]' );
+    my $result = filterXMLDoc( $XMLTree, '.[element="value"][@attribute="value"]' );
     my $result = filterXMLDoc( $XMLTree, [ ".", \@params ] );
 
 =cut
@@ -1568,8 +1885,7 @@ The subtree that is validated, or undef if not validated
 sub validateAttrValue ($$);
 sub validateAttrValue ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 2) { carp 'method validateAttrValue($$) requires two arguments.'; return undef; }
-    #validate_pos( @_, 1, 1);
+    unless (@_ == 2) { carp 'method validateAttrValue($$) requires two arguments.'; return undef; }
     my $subtree     = shift;
     my $params      = shift;
     if (ref $subtree eq "ARRAY") {
@@ -1700,11 +2016,11 @@ nodes and their subtrees will be returned to the caller as a list (array).
 
 =over 4
 
-=item * C<XMLTree>
+=item * B<XMLTree>
 
 An XML::TreePP parsed XML document.
 
-=item * C<XMLPath>
+=item * B<XMLPath>
 
 The path within the XML Tree to retrieve. See parseXMLPath()
 
@@ -1733,8 +2049,7 @@ values and not referenced subtree nodes.
 # @return   a subtree of the XMLTree from the given XMLPath
 sub getSubtree ($$) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
-    if (@_ != 2) { carp 'method getSubtree($$) requires two arguments.'; return undef; }
-    #validate_pos( @_, 1, 1);
+    unless (@_ == 2) { carp 'method getSubtree($$) requires two arguments.'; return undef; }
     my $tree        = shift;
     my $path        = shift;
 
@@ -1749,11 +2064,11 @@ sub getSubtree ($$) {
 
 =over 4
 
-=item * C<XMLTree>
+=item * B<XMLTree>
 
 An XML::TreePP parsed XML document.
 
-=item * C<XMLPath>
+=item * B<XMLPath>
 
 The path within the XML Tree to retrieve. See parseXMLPath()
 
@@ -1795,12 +2110,10 @@ sub getAttributes (@);
 sub getAttributes (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     unless (@_ >= 1) { carp 'method getAttributes($$) requires one argument, and optionally a second argument.'; return undef; }
-    # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
 
-    # Next 7 lines of code is considered for 0.57
-    my ($xml_text_id,$xml_attr_id);
+    my ($tpp,$xml_text_id,$xml_attr_id);
     if ((defined $self) && (defined $self->get('tpp'))) {
         my $tpp      = $self ? $self->tpp() : tpp();
         $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
@@ -1809,7 +2122,6 @@ sub getAttributes (@) {
         $xml_text_id = '#text';
         $xml_attr_id = '-';
     }
-    # end 0.57 onsideration
 
     my $subtree;
     if (defined $path) {
@@ -1828,8 +2140,8 @@ sub getAttributes (@) {
     } elsif (ref $subtree eq "HASH") {
         my $e_elem;
         while (my ($k,$v) = each(%{$subtree})) {
-            if ($k =~ /^\-/) {
-                $k =~ s/^\-//;
+            if ($k =~ /^$xml_attr_id/) {
+                $k =~ s/^$xml_attr_id//;
                 $e_elem->{$k} = $v;
             }
         }
@@ -1848,11 +2160,11 @@ Gets the child elements found at a specified XMLPath
 
 =over 4
 
-=item * C<XMLTree>
+=item * B<XMLTree>
 
 An XML::TreePP parsed XML document.
 
-=item * C<XMLPath>
+=item * B<XMLPath>
 
 The path within the XML Tree to retrieve. See parseXMLPath()
 
@@ -1894,9 +2206,19 @@ sub getElements (@);
 sub getElements (@) {
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     unless (@_ >= 1) { carp 'method getElements($$) requires one argument, and optionally a second argument.'; return undef; }
-    # validate_pos( @_, 1, 0);
     my $tree        = shift;
     my $path        = shift || undef;
+
+    my ($tpp,$xml_text_id,$xml_attr_id);
+    if ((defined $self) && (defined $self->get('tpp'))) {
+        my $tpp      = $self ? $self->tpp() : tpp();
+        $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+        $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+    } else {
+        $xml_text_id = '#text';
+        $xml_attr_id = '-';
+    }
+
     my $subtree;
     if (defined $path) {
         $subtree = filterXMLDoc($tree,$path);
@@ -1914,7 +2236,7 @@ sub getElements (@) {
     } elsif (ref $subtree eq "HASH") {
         my $e_elem;
         while (my ($k,$v) = each(%{$subtree})) {
-            if ($k !~ /^\-/) {
+            if ($k !~ /^$xml_attr_id/) {
                 $e_elem->{$k} = $v;
             }
         }

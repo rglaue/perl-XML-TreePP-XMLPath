@@ -74,15 +74,17 @@ ok ( $flag == 1, "getAttributes() by XML node" );
 
 # Test getting values
 $path   = '/test/node/@id';
+#$path   = '/test/node/@id';
 $result = $tppx->getValues($tree,$path);
 $flag   = 0;
 if (   ( $result->[0] eq 'one' )
     && ( $result->[1] eq 'two' )
-    && ( $result->[2] eq 'three' ) )
+    && ( $result->[2] eq 'three' )
+    && ( @{$result} == 3 ) )
     {
         $flag = 1;
     }
-ok ( $flag == 1, "getValues() by XML attribute" );
+ok ( $flag == 1, "getValues() by XML attribute" ) || explain $result;
 
 
 
