@@ -970,10 +970,16 @@ ParentMap - Return a Map of the entire xml document, which includes:
 (1) a reference map from each parent node to all matching child nodes
 (2) a reference to xml document fragments from the parent nodes
 
+    [
     { root      => HASHREF,
-      path      => '/nodename[#]/nodename[#]',
-      child => [{ name => nodename, position => #, target => targetname }]
-    }
+      path      => '/nodename[#]/nodename[6]',
+      child => [{ name => nodename, position => 6, target => targetname }]
+    },
+    { root      => HASHREF,
+      path      => '/nodename[#]/nodename[7]',
+      child => [{ name => nodename, position => 7, target => targetname }]
+    },
+    ]
 
 =item * I<returns>
 

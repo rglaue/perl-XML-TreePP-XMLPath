@@ -1,8 +1,13 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
-0.57    2009-XX-XX reg
-        - not released - in development
-        - updated POD Documentation
+0.60    2009-09-28 reg
+        - Major changes to internal functionality of the filterXMLDoc() method,
+          which includes a new mapping option (structure => type) to define the
+          the format of the returned results.
+        - The filterXMLDoc() method now has good support for use of the special
+          parent (..) indication in an XMLPath.
+        - Updated POD documentation.
+        - Some code cleanup.
 
 0.56    2009-09-08 reg
         - This fixes a bug for getElements and getAttributes methods. These
