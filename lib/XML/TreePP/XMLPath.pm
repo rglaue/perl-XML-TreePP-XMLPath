@@ -966,7 +966,8 @@ definitive XMLPath (mapped from the root) to the found targets, which includes:
         }] }]
     }
 
-ParentMap - Return a Map of the entire xml document, which includes:
+ParentMap - Return a Map of the parent nodes to found target nodes in the xml
+document, which includes:
 (1) a reference map from each parent node to all matching child nodes
 (2) a reference to xml document fragments from the parent nodes
 

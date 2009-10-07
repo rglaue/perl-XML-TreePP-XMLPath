@@ -1,6 +1,6 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
-0.60    2009-09-28 reg
+0.60    2009-10-07 reg
         - Major changes to internal functionality of the filterXMLDoc() method,
           which includes a new mapping option (structure => type) to define the
           the format of the returned results.
