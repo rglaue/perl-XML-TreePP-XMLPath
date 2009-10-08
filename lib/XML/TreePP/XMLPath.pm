@@ -973,11 +973,11 @@ document, which includes:
 
     [
     { root      => HASHREF,
-      path      => '/nodename[#]/nodename[6]',
+      path      => '/nodename[#]/nodename[6]/targetname',
       child => [{ name => nodename, position => 6, target => targetname }]
     },
     { root      => HASHREF,
-      path      => '/nodename[#]/nodename[7]',
+      path      => '/nodename[#]/nodename[7]/targetname',
       child => [{ name => nodename, position => 7, target => targetname }]
     },
     ]
