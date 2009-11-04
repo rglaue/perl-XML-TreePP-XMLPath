@@ -1,5 +1,9 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.61    2009-10-08 reg
+        - Bug fix for issue when filtering for the root element (i.e. '/root')
+          filterXMLDoc returned a hash as a result rather than an ARRAY ref.
+
 0.60    2009-10-07 reg
         - Major changes to internal functionality of the filterXMLDoc() method,
           which includes a new mapping option (structure => type) to define the

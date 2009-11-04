@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 
 use lib 'lib';
+use Test::Harness qw(runtests);
+$Test::Harness::verbose = 1;
 
 my @testfiles;
 if (@ARGV >= 1) {
@@ -8,13 +10,10 @@ if (@ARGV >= 1) {
 } else {
     opendir (TD, 't');
     while (my $testfile = readdir(TD)) {
-        push (@testfiles,$testfile);
+        next unless $testfile =~ /\.t$/;
+        push (@testfiles,('t/'.$testfile));
     }
     closedir(TD);
 }
 
-foreach my $testfile (@testfiles) {
-    next unless $testfile =~ /\.t$/;
-    print "[ ".$testfile." ]\n";
-    require ( ("t/".$testfile) );
-}
+runtests(sort @testfiles);

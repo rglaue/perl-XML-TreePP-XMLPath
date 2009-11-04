@@ -16,5 +16,5 @@ WriteMakefile(
                              'Data::Dump'  => 1.10,
                            },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'XML-TreePP-Editor-*' },
+    clean               => { FILES => 'XML-TreePP-XMLPath-*' },
 );
