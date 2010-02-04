@@ -34,6 +34,9 @@ my $xmldoc =<<XML_EOF;
         <![CDATA[<html><body>test data three</body></html>]]>
     </data>
   </node>
+  <node id="0">
+    <data>test data zero </data>
+  </node>
 </test>
 XML_EOF
 
@@ -41,13 +44,17 @@ my $tree = $tpp->parse($xmldoc);
 my ($path, $result, $flag);
 
 
+#
 # Test XML Document Parsing and filtering by XMLPath
+#
 # ok ( $tree->{'test'}->{'node'}->[2]->{'data'}->{'#text'} eq '<html><body>test data three</body></html>', "XML Tree Parsing );
 $result = $tppx->filterXMLDoc($tree, '/test/node[3]/data');
 ok ( $result->[0]->{'#text'} eq $tree->{'test'}->{'node'}->[2]->{'data'}->{'#text'}, "filterXMLDoc() by XML node" ) || diag explain $result;
 
 
+#
 # Test getting elements and attributes
+#
 $path   = '/test/node';
 # elements
 $result = $tppx->getElements($tree,$path);
@@ -72,7 +79,9 @@ if (   ( $result->[0]->{'id'} eq 'one' )
 ok ( $flag == 1, "getAttributes() by XML node" );
 
 
+#
 # Test getting values
+#
 $path   = '/test/node/@id';
 #$path   = '/test/node/@id';
 $result = $tppx->getValues($tree,$path);
@@ -80,7 +89,8 @@ $flag   = 0;
 if (   ( $result->[0] eq 'one' )
     && ( $result->[1] eq 'two' )
     && ( $result->[2] eq 'three' )
-    && ( @{$result} == 3 ) )
+    && ( $result->[3] eq '0' )
+    && ( @{$result} == 4 ) )
     {
         $flag = 1;
     }
