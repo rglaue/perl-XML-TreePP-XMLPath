@@ -309,7 +309,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION $TPPKEYS );
-    $VERSION    = '0.61';
+    $VERSION    = '0.62';
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 
     use vars      qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
@@ -1118,6 +1118,8 @@ sub filterXMLDoc (@) {
         print ("="x8,"sub:filterXMLDoc|processFilters->()\n") if $DEBUG >= $DEBUGMETHOD;
         my $xmltree_child           = shift;
         my $filters                 = shift;
+        print ("++++ELEMENT:".pp($xmltree_child)."\n") if $DEBUG >= $DEBUGDUMP;
+        print ("++++ FILTER:".pp($filters)."\n") if $DEBUG >= $DEBUGDUMP;
         my $filters_processed_count = 0; # Will catch a filters error of [[][][]] or something
         my $param_match_flag        = 0;
         if ((!defined $filters) || (@{$filters} == 0)) {
@@ -1373,7 +1375,7 @@ sub filterXMLDoc (@) {
             }
 
             if (    ((!defined $filters) || (@{$filters} < 1))
-                 || (( $processFilters->($xmltree,$filters) ))   ) {
+                 || ( defined $processFilters->($xmltree,$filters) )   ) {
                 push(@found,$xmltree);
             }
         } elsif (ref $xmltree eq "ARRAY") {
@@ -1410,11 +1412,11 @@ sub filterXMLDoc (@) {
                 return undef if (@{$xmlpath} >= 1); # Cannot descend as path dictates, so no match
                 return undef if defined $elementposition && $elementposition >= 2; # There is only one child node
                 print (" "x8,"= end of path reached with text CDATA\n") if $DEBUG > 1;
-                if (( $processFilters->($xmltree->{$element},$filters) )) {
+                if ( defined $processFilters->($xmltree->{$element},$filters) ) {
                     $thisnodemap->{'target'} = $element;  # $element eq '#text'
                     $result = $xmltree->{$element};
                 } else {
-                    print ("-"x12,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    print ("-"x12,"= node (text) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                     return undef;
                 }
             } elsif ($nodetype eq "attribute") {
@@ -1425,11 +1427,11 @@ sub filterXMLDoc (@) {
                 return undef if (@{$xmlpath} >= 1); # Cannot descend as path dictates, so no match
                 return undef if defined $elementposition && $elementposition >= 2; # There is only one child node
                 print (" "x8,"= end of path reached with attribute\n") if $DEBUG >= $DEBUGPATH;
-                if (( $processFilters->($xmltree->{$element},$filters) )) {
+                if ( defined $processFilters->($xmltree->{$element},$filters) ) {
                     $thisnodemap->{'target'} = $element;
                     $result = $xmltree->{$element};
                 } else {
-                    print ("-"x12,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    print ("-"x12,"= node (attribute) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                     return undef;
                 }
             } elsif (($nodetype eq "element") && (! ref($xmltree->{$element})) ) {
@@ -1439,17 +1441,17 @@ sub filterXMLDoc (@) {
                 unless (   (defined $xmltree->{$element}) && ($xmltree->{$element} =~ /\w+/)
                         && (   ((ref($xmlpath) eq "ARRAY") && (@{$xmlpath} == 1))
                             && ($whatisnode->($xmlpath->[0]->[0]) eq "text") 
-                            && ($processFilters->($xmltree->{$element},$xmlpath->[0]->[1])) ) ) {
+                            && (defined $processFilters->($xmltree->{$element},$xmlpath->[0]->[1])) ) ) {
                     return undef if (@{$xmlpath} >= 1); # Cannot descend as path dictates, so no match
                     return undef if defined $elementposition && $elementposition >= 2; # There is only one child node
                 }
                 print ("-"x16,"60= nodetype is element with text on final path\n") if $DEBUG >= $DEBUGNODE;
-                if (( $processFilters->($xmltree->{$element},$filters) )) {
+                if ( defined $processFilters->($xmltree->{$element},$filters) ) {
                     my $childmap = { name => $element, position => 1, target => undef };
                     $mapTran->($thisnodemap, child => $childmap );
                     $result = $xmltree->{$element};
                 } else {
-                    print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    print ("-"x16,"= node (element) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                     return undef;
                 }
             } elsif ($nodetype eq "parent") {
@@ -1459,23 +1461,23 @@ sub filterXMLDoc (@) {
                 my $parentnode = $crumb->[0];
                 my $parentmap  = $crumb->[1];
                 return undef unless defined $parentnode;
-                if ( $processFilters->($parentnode,$filters) ) {
+                if ( defined $processFilters->($parentnode,$filters) ) {
                     # If there were no filters, path was something like '/path/to/../element'
                     # If there were filters, path was something like '/path/to/..[filter]/element'
                     $result = $find->($parentnode,$xmlpath,$parentmap,$breadcrumb);
                 } else {
-                    print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    print ("-"x16,"= node (parent) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                     return undef;
                 }
             } elsif ($nodetype eq "current") {
                 print ("-"x12,"= search tree node (".$element.") is current node\n") if $DEBUG >= $DEBUGNODE;
                 return undef if defined $elementposition && $elementposition >= 2; # The current node is always a hash
-                if ( $processFilters->($xmltree,$filters) ) {
+                if ( defined $processFilters->($xmltree,$filters) ) {
                     # If there were no filters, path was something like '/path/to/./element'
                     # If there were filters, path was something like '/path/to/.[filter]/element'
                     $result = $find->($xmltree,$xmlpath,$thisnodemap,$breadcrumb);
                 } else {
-                    print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                    print ("-"x16,"= node (current) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                     return undef;
                 }
             } elsif ($nodetype eq "element") {
@@ -1483,7 +1485,7 @@ sub filterXMLDoc (@) {
                 if ( ref($xmltree->{$element}) eq "HASH" ) {
                     print ("-"x16,"= search tree node (".$element.") is element with REF HASH\n") if $DEBUG >= $DEBUGNODE;
                     return undef if defined $elementposition && $elementposition >= 2; # There is only one child node, as a hash
-                    if ( $processFilters->($xmltree->{$element},$filters) ) {
+                    if ( defined $processFilters->($xmltree->{$element},$filters) ) {
                         my $childmap = { name => $element, position => 1 };
                         $bctrail->($breadcrumb,"addnode",[$xmltree,$thisnodemap]);
                         $result = $find->($xmltree->{$element},$xmlpath,$childmap,$breadcrumb);
@@ -1492,12 +1494,12 @@ sub filterXMLDoc (@) {
                             $mapTran->($thisnodemap, child => $childmap );
                         }
                     } else {
-                        print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                        print ("-"x16,"= node (element[hash]) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                         return undef;
                     }
                 } elsif (( ref($xmltree->{$element}) eq "ARRAY" ) && (defined $elementposition) && ($elementposition >= 1)) {
                     print ("-"x16,"= search tree node (".$element.") is element with REF ARRAY position $elementposition\n") if $DEBUG >= $DEBUGNODE;
-                    if ( $processFilters->($xmltree->{$element},$filters) ) {
+                    if ( defined $processFilters->($xmltree->{$element},$filters) ) {
                         my $childmap = { name => $element, position => $elementposition };
                         $bctrail->($breadcrumb,"addnode",[$xmltree,$thisnodemap]);
                         $result = $find->($xmltree->{$element}->[($elementposition - 1)],$xmlpath,$childmap,$breadcrumb);
@@ -1506,7 +1508,7 @@ sub filterXMLDoc (@) {
                             $mapTran->($thisnodemap, child => $childmap );
                         }
                     } else {
-                        print ("-"x16,"= node did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                        print ("-"x16,"= node (element[array]) did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                         return undef;
                     }
                 } elsif ( ref($xmltree->{$element}) eq "ARRAY" ) {
@@ -1523,16 +1525,16 @@ sub filterXMLDoc (@) {
                         if (   ((!ref($sub)) && ($sub =~ /\w+/))
                             && (   ((ref($xmlpath) eq "ARRAY") && (@{$xmlpath} == 1))
                                 && ($whatisnode->($xmlpath->[0]->[0]) eq "text") 
-                                && ($processFilters->($sub,$tmpxmlpath->[0]->[1])) ) ) {
+                                && (defined $processFilters->($sub,$tmpxmlpath->[0]->[1])) ) ) {
                             $childmap = { name => $element, position => $xmlpos, target => undef };
                             $mresult = $xmltree->{$element}->[($xmlpos - 1)];
-                        } elsif ( $processFilters->($sub,$tmpfilters) ) {
+                        } elsif ( defined $processFilters->($sub,$tmpfilters) ) {
                             print ("-"x16,"= node at position ".$xmlpos." passed filters.\n") if $DEBUG >= $DEBUGNODE;
                             $childmap = { name => $element, position => $xmlpos };
                             $bc_clone = $bctrail->($breadcrumb,"clone");
                             $mresult = $find->($sub,$tmpxmlpath,$childmap,$bc_clone);
                         } else {
-                            print ("-"x16,"= node at position ".$xmlpos." did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
+                            print ("-"x16,"= node (element) at position ".$xmlpos." did not pass filters.\n") if $DEBUG >= $DEBUGNODE;
                             next;
                         }
                         if (defined $mresult) {

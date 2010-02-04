@@ -1,5 +1,10 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.62    2010-02-04 reg
+        - This fixes a bug for getValues() method. This method would not return
+          the value of an attribute if the values was "0" (zero).
+        - The getValues() test case was modified to test for this.
+
 0.61    2009-11-04 reg
         - Bug fix for issue when filtering for the root element (i.e. '/root')
           filterXMLDoc returned a hash as a result rather than an ARRAY ref.
