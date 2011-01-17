@@ -309,7 +309,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION $TPPKEYS );
-    $VERSION    = '0.62';
+    $VERSION    = '0.63';
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 
     use vars      qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
@@ -1754,9 +1754,10 @@ sub getValues (@) {
     # for debugging purposes
     print (" "x8, "=Found at var's path: ", pp( $results ),"\n") if $DEBUG >= $DEBUGDUMP;
 
-    my $getVal = sub ($) {};
-    $getVal = sub ($) {
+    my $getVal = sub ($$) {};
+    $getVal = sub ($$) {
         print ("="x8,"sub::getValues|getVal->()\n") if $DEBUG >= $DEBUGMETHOD;
+        my $v_ret_type = shift;
         my $treeNodes = shift;
         print (" "x8,"getVal->():from> ",pp($treeNodes)) if $DEBUG >= $DEBUGDUMP;
         print (" - '",ref($treeNodes)||'string',"'\n") if $DEBUG >= $DEBUGDUMP;
@@ -1769,7 +1770,7 @@ sub getValues (@) {
             push (@results, $tpp->write($utreeNodes)) if $v_ret_type =~ /x/;
         } elsif (ref($treeNodes) eq "ARRAY") {
             foreach my $item (@{$treeNodes}) {
-                my $r1 = $getVal->($item);
+                my $r1 = $getVal->($v_ret_type,$item);
                 foreach my $r2 (@{$r1}) {
                     push(@results,$r2) if defined $r2;
                 }
@@ -1784,7 +1785,7 @@ sub getValues (@) {
         $tpp->set( xml_decl => $old_prop_xml_decl );
     }
 
-    my $found = $getVal->($results);
+    my $found = $getVal->($v_ret_type,$results);
     $found = [$found] if ref $found ne "ARRAY";
 
     if ($v_trim) {
@@ -2883,7 +2884,7 @@ XML::TreePP::XMLPath on Codepin: http://www.codepin.org/project/perlmod/XML-Tree
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2008-2009 Center for the Application of Information Technologies.
+Copyright (c) 2008-2011 Russell E Glaue, Center for the Application of Information Technologies.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
