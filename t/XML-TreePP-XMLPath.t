@@ -5,10 +5,11 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 BEGIN { use_ok('XML::TreePP::XMLPath'); };
 use_ok('XML::TreePP'); 
 use_ok('Data::Dump');
+use_ok('Data::Dumper');
 
 #########################
 
