@@ -1,5 +1,11 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.64    TBA reg
+        - Bug fix for the issue where $tpp->parse($x) dies when $x is not
+          defined, whereas the code was instead expecting undef to be returned
+          in this case. This bug caused calls to filterXMLDoc() or getValues()
+          to fail when the XMLPath referenced a non-existing XML leaf. 
+
 0.63    2011-01-17 reg
         - This fixes a bug in getValues() method exposed in PERL 5.13.1 and
           higher, where a local variable is not shared with a sub reference.
