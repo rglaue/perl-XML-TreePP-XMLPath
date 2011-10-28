@@ -1034,7 +1034,7 @@ sub filterXMLDoc (@) {
     if (ref $tree) { $xtree = $tree;
                    }
               else { if (!defined $tpp) { $tpp = $self ? $self->tpp() : tpp(); }
-                     $xtree = $tpp->parse($tree);
+                     $xtree = $tpp->parse($tree) if defined $tree;
                    }
     if (ref $path) { $xpath = eval (Dumper($path)); # make a copy of inputted parsed XMLPath
                    }
@@ -1734,7 +1734,7 @@ sub getValues (@) {
     if (ref $tree) { $xtree = $tree;
                    }
               else { if (!defined $tpp) { $tpp = $self ? $self->tpp() : tpp(); }
-                     $xtree = $tpp->parse($tree);
+                     $xtree = $tpp->parse($tree) if defined $tree;
                    }
     if (ref $path) { $xpath = eval (Dumper($path)); # make a copy of inputted parsed XMLPath
                    }
