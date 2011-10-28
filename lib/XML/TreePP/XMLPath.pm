@@ -1033,6 +1033,9 @@ sub filterXMLDoc (@) {
     }
     if (ref $tree) { $xtree = $tree;
                    }
+    elsif (!defined $tree)
+                   { $xtree = undef
+                   }
               else { if (!defined $tpp) { $tpp = $self ? $self->tpp() : tpp(); }
                      $xtree = $tpp->parse($tree) if defined $tree;
                    }
@@ -1732,6 +1735,9 @@ sub getValues (@) {
         $xml_attr_id = '-';
     }
     if (ref $tree) { $xtree = $tree;
+                   }
+    elsif (!defined $tree)
+                   { $xtree = undef
                    }
               else { if (!defined $tpp) { $tpp = $self ? $self->tpp() : tpp(); }
                      $xtree = $tpp->parse($tree) if defined $tree;
