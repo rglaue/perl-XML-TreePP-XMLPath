@@ -100,8 +100,6 @@ The following perl modules are depended on by this module:
 
 =item *     XML::TreePP
 
-=item *     Data::Dump
-
 =item *     Data::Dumper
 
 =back
@@ -299,7 +297,7 @@ use warnings;
 use Exporter;
 use Carp;
 use XML::TreePP;
-use Data::Dump;
+#use Data::Dump;
 use Data::Dumper;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Purity = 1;
@@ -1049,7 +1047,7 @@ sub filterXMLDoc (@) {
     my $validateFilter = sub (@) {
         my %args            = @_;
         print ("="x8,"sub:filterXMLDoc|validateFilter->()\n") if $DEBUG >= $DEBUGMETHOD;
-        print (" "x8,"= attempting to validate filter, with: ", pp(\%args) ,"\n") if $DEBUG >= $DEBUGDUMP;
+        print (" "x8,"= attempting to validate filter, with: ", Dumper(\%args) ,"\n") if $DEBUG >= $DEBUGDUMP;
         # we accept:
         # - required: node,param,comparevalue ; optional: operand(=) (= is default)
         # not accepted: - required: node,param,operand(exists)
@@ -1127,8 +1125,8 @@ sub filterXMLDoc (@) {
         print ("="x8,"sub:filterXMLDoc|processFilters->()\n") if $DEBUG >= $DEBUGMETHOD;
         my $xmltree_child           = shift;
         my $filters                 = shift;
-        print ("++++ELEMENT:".pp($xmltree_child)."\n") if $DEBUG >= $DEBUGDUMP;
-        print ("++++ FILTER:".pp($filters)."\n") if $DEBUG >= $DEBUGDUMP;
+        print ("++++ELEMENT:".Dumper($xmltree_child)."\n") if $DEBUG >= $DEBUGDUMP;
+        print ("++++ FILTER:".Dumper($filters)."\n") if $DEBUG >= $DEBUGDUMP;
         my $filters_processed_count = 0; # Will catch a filters error of [[][][]] or something
         my $param_match_flag        = 0;
         if ((!defined $filters) || (@{$filters} == 0)) {
@@ -1344,17 +1342,17 @@ sub filterXMLDoc (@) {
         my $thisnodemap     = shift || undef;
         my $breadcrumb      = shift || [];
         print ("="x8,"sub::filterXMLDoc|_find()\n") if $DEBUG >= $DEBUGMETHOD;
-        print (" "x7,"=attempting to find path: ", pp($xmlpath) ,"\n") if $DEBUG >= $DEBUGDUMP;
-        print (" "x7,"=attempting to search in: ", pp($xmltree) ,"\n") if $DEBUG >= $DEBUGDUMP;
+        print (" "x7,"=attempting to find path: ", Dumper($xmlpath) ,"\n") if $DEBUG >= $DEBUGDUMP;
+        print (" "x7,"=attempting to search in: ", Dumper($xmltree) ,"\n") if $DEBUG >= $DEBUGDUMP;
         if (($DEBUG >= 1) && ($DEBUG <= 5)) {
             print ( "-"x11 . "# Descending in search with criteria: " . "\n");
-            print ( pp({ nodemap => $thisnodemap }) . "\n");
-            print ( pp({ xmlpath => $xmlpath }) . "\n");
-            print ( pp({ xmlfragment => $xmltree }) . "\n");
+            print ( Dumper({ nodemap => $thisnodemap }) . "\n");
+            print ( Dumper({ xmlpath => $xmlpath }) . "\n");
+            print ( Dumper({ xmlfragment => $xmltree }) . "\n");
         }
 
         my (@found,@maps);
-        #print (" "x8, "searching begins on node with nodemap:", pp ($thisnodemap) if $DEBUG > 5;
+        #print (" "x8, "searching begins on node with nodemap:", Dumper ($thisnodemap) if $DEBUG > 5;
         # If there are no more path to analyze, return
         if ((ref($xmlpath) ne "ARRAY") || (! @{$xmlpath} >= 1)) {
             print (" "x12,"= end of path reached\n") if $DEBUG >= $DEBUGPATH;
@@ -1525,7 +1523,7 @@ sub filterXMLDoc (@) {
                     my $xmlpos = 0;
                     $bctrail->($breadcrumb,"addnode",[$xmltree,$thisnodemap]);
                     foreach my $sub (@{$xmltree->{$element}}) {
-                        # print (" "x20, "filtering child node:", pp({ sub => $sub, target => $xmlpath->[0]->[0] }) if $DEBUG > 5;
+                        # print (" "x20, "filtering child node:", Dumper({ sub => $sub, target => $xmlpath->[0]->[0] }) if $DEBUG > 5;
                         $xmlpos++;
                         my ($mresult,$childmap);
                         my $tmpfilters = eval( Dumper($filters) );
@@ -1565,7 +1563,7 @@ sub filterXMLDoc (@) {
             }
         }
         }
-        #print (" "x8, "searching ended on node with nodemap:", pp ($thisnodemap) if $DEBUG > 5;
+        #print (" "x8, "searching ended on node with nodemap:", Dumper ($thisnodemap) if $DEBUG > 5;
         return undef if @found == 0;
         return \@found;
     }; # end find->()
@@ -1629,9 +1627,9 @@ sub filterXMLDoc (@) {
         print ("-"x11,"# Search yielded results." . "\n") if defined $thismap || defined $found;
     }
     if (($DEBUG) && (defined $thismap)) {
-        print pp({ structure => $o_structure, thismap => $thismap });
+        print Dumper({ structure => $o_structure, thismap => $thismap });
     } elsif (($DEBUG) && (defined $found)) {
-        print pp({ structure => $o_structure, results => $found });
+        print Dumper({ structure => $o_structure, results => $found });
     }
 
     if (($o_structure =~ /^RootMap$/i) || ($o_structure =~ /^ParentMap$/i)) {
@@ -1758,20 +1756,20 @@ sub getValues (@) {
 
     print ("="x8,"sub::getValues()\n") if $DEBUG >= $DEBUGMETHOD;
     print (" "x8, "=called with return type: ",$v_ret_type,"\n") if $DEBUG >= $DEBUGMETHOD;
-    print (" "x8, "=called with path: ",pp($xpath),"\n") if $DEBUG >= $DEBUGPATH;
+    print (" "x8, "=called with path: ",Dumper($xpath),"\n") if $DEBUG >= $DEBUGPATH;
 
     # Retrieve the sub tree of the XML document at path
     my $results = filterXMLDoc($xtree, $xpath);
 
     # for debugging purposes
-    print (" "x8, "=Found at var's path: ", pp( $results ),"\n") if $DEBUG >= $DEBUGDUMP;
+    print (" "x8, "=Found at var's path: ", Dumper( $results ),"\n") if $DEBUG >= $DEBUGDUMP;
 
     my $getVal = sub ($$) {};
     $getVal = sub ($$) {
         print ("="x8,"sub::getValues|getVal->()\n") if $DEBUG >= $DEBUGMETHOD;
         my $v_ret_type = shift;
         my $treeNodes = shift;
-        print (" "x8,"getVal->():from> ",pp($treeNodes)) if $DEBUG >= $DEBUGDUMP;
+        print (" "x8,"getVal->():from> ",Dumper($treeNodes)) if $DEBUG >= $DEBUGDUMP;
         print (" - '",ref($treeNodes)||'string',"'\n") if $DEBUG >= $DEBUGDUMP;
         my @results;
         if (ref($treeNodes) eq "HASH") {
@@ -2322,7 +2320,7 @@ First, parse the entire string delimited by the / character.
         boundry_begin => 1,
         boundry_end   => 1
         );
-    dump( $el );
+    print Dumper( $el );
 
 Output:
 
@@ -2341,7 +2339,7 @@ each single key/val is contained by the [ and ] characters
         boundry_begin => 0,
         boundry_end   => 0
         );
-    dump( $el );
+    print Dumper( $el );
 
 Output:
 
@@ -2360,7 +2358,7 @@ key/val is delimited by the = character
         boundry_begin => 1,
         boundry_end   => 1
         );
-    dump( $el );
+    print Dumper( $el );
 
 Output:
 
@@ -2381,7 +2379,7 @@ results. This example demonstrate this data error.
         boundry_begin => 0,
         boundry_end   => 0
         );
-    dump( $el );
+    print Dumper( $el );
 
 Undesired output:
 
@@ -2396,12 +2394,12 @@ element silently due to the token start and stop mismatch.
 =head2 Method: parseXMLPath
 
     use XML::TreePP::XMLPath qw(parseXMLPath);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     
     my $parsedPath = parseXMLPath(
                                   q{abcdefg/xyz/path[@key1='val1'][key2='val2']/last}
                                   );
-    dump ( $parsedPath );
+    print Dumper ( $parsedPath );
 
 Output:
 
@@ -2420,7 +2418,7 @@ document.
     #!/usr/bin/perl
     use XML::TreePP;
     use XML::TreePP::XMLPath qw(filterXMLDoc);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     #
     # The XML document data
     my $xmldata=<<XMLEND;
@@ -2442,17 +2440,17 @@ document.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
-    dump( $xmldoc );
+    print Dumper( $xmldoc );
     #
     # Retrieve the sub tree of the XML document at path "level1/level2"
     my $xmlSubTree = filterXMLDoc($xmldoc, 'level1/level2');
     print "Output Test #2\n";
-    dump( $xmlSubTree );
+    print Dumper( $xmlSubTree );
     #
     # Retrieve the sub tree of the XML document at path "level1/level2/level3[@attr1='val1']"
     my $xmlSubTree = filterXMLDoc($xmldoc, 'level1/level2/level3[@attr1="val1"]');
     print "Output Test #3\n";
-    dump( $xmlSubTree );
+    print Dumper( $xmlSubTree );
 
 Output:
 
@@ -2500,7 +2498,7 @@ Validating attribute and value pairs of a given node.
     #!/usr/bin/perl
     use XML::TreePP;
     use XML::TreePP::XMLPath qw(filterXMLDoc);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     #
     # The XML document data
     my $xmldata=<<XMLEND;
@@ -2520,12 +2518,12 @@ Validating attribute and value pairs of a given node.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
-    dump( $xmldoc );
+    print Dumper( $xmldoc );
     #
     # Retrieve the sub tree of the XML document at path "paragraph/sentence"
     my $xmlSubTree = filterXMLDoc($xmldoc, "paragraph/sentence");
     print "Output Test #2\n";
-    dump( $xmlSubTree );
+    print Dumper( $xmlSubTree );
     #
     my (@params, $validatedSubTree);
     #
@@ -2533,13 +2531,13 @@ Validating attribute and value pairs of a given node.
     @params = (['-language', 'german']);
     $validatedSubTree = filterXMLDoc($xmlSubTree, [ ".", \@params ]);
     print "Output Test #3\n";
-    dump( $validatedSubTree );
+    print Dumper( $validatedSubTree );
     #
     # Test the XML Sub Tree to have an attribute "-language" with value "english"
     @params = (['-language', 'english']);
     $validatedSubTree = filterXMLDoc($xmlSubTree, [ ".", \@params ]);
     print "Output Test #4\n";
-    dump( $validatedSubTree );
+    print Dumper( $validatedSubTree );
 
 Output:
 
@@ -2587,7 +2585,7 @@ Output:
     #!/usr/bin/perl
     use XML::TreePP;
     use XML::TreePP::XMLPath qw(getSubtree validateAttrValue);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     #
     # The XML document data
     my $xmldata=<<XMLEND;
@@ -2607,12 +2605,12 @@ Output:
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
-    dump( $xmldoc );
+    print Dumper( $xmldoc );
     #
     # Retrieve the sub tree of the XML document at path "paragraph/sentence"
     my $xmlSubTree = getSubtree($xmldoc, "paragraph/sentence");
     print "Output Test #2\n";
-    dump( $xmlSubTree );
+    print Dumper( $xmlSubTree );
     #
     my (@params, $validatedSubTree);
     #
@@ -2620,13 +2618,13 @@ Output:
     @params = (['-language', 'german']);
     $validatedSubTree = validateAttrValue($xmlSubTree, \@params);
     print "Output Test #3\n";
-    dump( $validatedSubTree );
+    print Dumper( $validatedSubTree );
     #
     # Test the XML Sub Tree to have an attribute "-language" with value "english"
     @params = (['-language', 'english']);
     $validatedSubTree = validateAttrValue($xmlSubTree, \@params);
     print "Output Test #4\n";
-    dump( $validatedSubTree );
+    print Dumper( $validatedSubTree );
 
 Output:
 
@@ -2674,7 +2672,7 @@ Output:
     #!/usr/bin/perl
     use XML::TreePP;
     use XML::TreePP::XMLPath qw(getSubtree);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     #
     # The XML document data
     my $xmldata=<<XMLEND;
@@ -2696,17 +2694,17 @@ Output:
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
-    dump( $xmldoc );
+    print Dumper( $xmldoc );
     #
     # Retrieve the sub tree of the XML document at path "level1/level2"
     my $xmlSubTree = getSubtree($xmldoc, 'level1/level2');
     print "Output Test #2\n";
-    dump( $xmlSubTree );
+    print Dumper( $xmlSubTree );
     #
     # Retrieve the sub tree of the XML document at path "level1/level2/level3[@attr1='val1']"
     my $xmlSubTree = getSubtree($xmldoc, 'level1/level2/level3[@attr1="val1"]');
     print "Output Test #3\n";
-    dump( $xmlSubTree );
+    print Dumper( $xmlSubTree );
 
 Output:
 
@@ -2757,7 +2755,7 @@ See validateAttrValue() EXAMPLES section for more usage examples.
     #
     use XML::TreePP;
     use XML::TreePP::XMLPath qw(getAttributes);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     #
     # The XML document data
     my $xmldata=<<XMLEND;
@@ -2779,17 +2777,17 @@ See validateAttrValue() EXAMPLES section for more usage examples.
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
-    dump( $xmldoc );
+    print Dumper( $xmldoc );
     #
     # Retrieve the sub tree of the XML document at path "level1/level2/level3"
     my $attributes = getAttributes($xmldoc, 'level1/level2/level3');
     print "Output Test #2\n";
-    dump( $attributes );
+    print Dumper( $attributes );
     #
     # Retrieve the sub tree of the XML document at path "level1/level2/level3[attr3=""]"
     my $attributes = getAttributes($xmldoc, 'level1/level2/level3[attr3="val3"]');
     print "Output Test #3\n";
-    dump( $attributes );
+    print Dumper( $attributes );
 
 Output:
 
@@ -2821,7 +2819,7 @@ Output:
     #
     use XML::TreePP;
     use XML::TreePP::XMLPath qw(getElements);
-    use Data::Dump qw(dump);
+    use Data::Dumper;
     #
     # The XML document data
     my $xmldata=<<XMLEND;
@@ -2843,17 +2841,17 @@ Output:
     my $tpp = new XML::TreePP;
     my $xmldoc = $tpp->parse($xmldata);
     print "Output Test #1\n";
-    dump( $xmldoc );
+    print Dumper( $xmldoc );
     #
     # Retrieve the multiple same-name elements of the XML document at path "level1/level2/level3"
     my $elements = getElements($xmldoc, 'level1/level2/level3');
     print "Output Test #2\n";
-    dump( $elements );
+    print Dumper( $elements );
     #
     # Retrieve the elements of the XML document at path "level1/level2/level3[attr3="val3"]
     my $elements = getElements($xmldoc, 'level1/level2/level3[attr3="val3"]');
     print "Output Test #3\n";
-    dump( $elements );
+    print Dumper( $elements );
 
 Output:
 

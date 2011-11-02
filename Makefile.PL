@@ -12,8 +12,8 @@ WriteMakefile(
       ? ('LICENSE'=> 'perl')
       : ()),
     PL_FILES            => {},
-    PREREQ_PM           => { 'XML::TreePP' => 0.39,
-                             'Data::Dump'  => 1.10,
+    PREREQ_PM           => { 'XML::TreePP'  => 0.39,
+                             'Data::Dumper' => 2.0,
                            },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'XML-TreePP-XMLPath-*' },
