@@ -94,7 +94,7 @@ this.
 =head1 REQUIREMENTS
 
 The following perl modules are depended on by this module:
-( I<Note: Dependency on Params::Validate was removed in version 0.52> )
+( I<Note: Dependency on Params::Validate was removed in version 0.52; Dependency on Data::Dump was removed in version 0.64> )
 
 =over 4
 
@@ -313,7 +313,7 @@ BEGIN {
     $REF_NAME   = "XML::TreePP::XMLPath";  # package name
 
     use vars      qw( $VERSION $TPPKEYS );
-    $VERSION    = '0.63';
+    $VERSION    = '0.64';
     $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 
     use vars      qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
