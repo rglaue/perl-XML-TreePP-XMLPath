@@ -2733,7 +2733,9 @@ XML::TreePP::XMLPath on Codepin: http://www.codepin.org/project/perlmod/XML-Tree
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2008-2011 Russell E Glaue, Center for the Application of Information Technologies.
+Copyright (c) 2008-2013 Russell E Glaue,
+Center for the Application of Information Technologies,
+Western Illinois University.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
