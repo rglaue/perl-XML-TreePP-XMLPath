@@ -1,12 +1,26 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
-0.64    TBA reg
+0.70    2013-04-16 reg
         - Bug fix for the issue where $tpp->parse($x) dies when $x is not
           defined, whereas the code was instead expecting undef to be returned
           in this case. This bug caused calls to filterXMLDoc() or getValues()
           to fail when the XMLPath referenced a non-existing XML leaf. 
+        - Bug fix to an issue in the charlexslit method of recognizing strings
+          with an escape character. Previously no escape character was used, and
+          strings escaping a character that was also the stop or start token
+          would fail to be recognized properly. Example as in 'The Cat\'s Meow'
+          would attempt to extract the string q{The Cat\} and would fail because
+          the it does cannot handle the remaining dangling string q{s Meow}.
         - No longer has dependency on Data::Dump, and all use has been changed
-          to the Data::Dumper module. This change includes the documentation.
+          to the Data::Dumper module. This change includes use of the method in
+          the examples of the documentation.
+        - New function assembleXMLPath() for assembling an XMLPath from a
+          provided representative array or hash ref structure.
+        - The deprecated methods validateAttrValue and getSubtree are now only
+          wrappers around the filterXMLDoc method. If they are called, a carp
+          message is given stating their deprecation. Also, their related
+          documentation has been removed. This allows for backwards
+          compatibility without encouraging new use.
 
 0.63    2011-01-17 reg
         - This fixes a bug in getValues() method exposed in PERL 5.13.1 and
