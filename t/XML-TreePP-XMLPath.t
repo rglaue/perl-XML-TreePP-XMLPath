@@ -5,10 +5,9 @@
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 BEGIN { use_ok('XML::TreePP::XMLPath'); };
 use_ok('XML::TreePP'); 
-use_ok('Data::Dump');
 use_ok('Data::Dumper');
 
 #########################
@@ -38,6 +37,7 @@ my $xmldoc =<<XML_EOF;
   <node id="0">
     <data>test data zero </data>
   </node>
+  <node>five</node>
 </test>
 XML_EOF
 
@@ -52,6 +52,8 @@ my ($path, $result, $flag);
 $result = $tppx->filterXMLDoc($tree, '/test/node[3]/data');
 ok ( $result->[0]->{'#text'} eq $tree->{'test'}->{'node'}->[2]->{'data'}->{'#text'}, "filterXMLDoc() by XML node" ) || diag explain $result;
 
+$result = $tppx->filterXMLDoc($tree, '/test/node')->[4];
+ok ( $result eq "five", "filterXMLDoc() by XML node, then immediate reference" ) || diag explain $result;
 
 #
 # Test getting elements and attributes
@@ -95,7 +97,18 @@ if (   ( $result->[0] eq 'one' )
     {
         $flag = 1;
     }
-ok ( $flag == 1, "getValues() by XML attribute" ) || explain $result;
+ok ( $flag == 1, "getValues() by XML attribute" ) || diag explain $result;
 
 
+#
+# Test parsing and assembling an XMLPath
+#
 
+$xpath = q{/books/book[5]/cats[-author='The Cat\'s Meow']/tigers[meateater]};
+$cpath = q{/books/book[5]/cats[@author="The Cat\'s Meow"]/tigers[meateater]};
+$ppath = $tppx->parseXMLPath($xpath);
+$tpath = $tppx->assembleXMLPath($ppath);
+$flag  = 0;
+if ( $cpath eq $tpath) { $flag = 1; }
+$result = [ $cpath , $tpath ];
+ok ( $flag == 1, "Comparing parseXMLPath() input to assembleXMLPath() output" ) || diag explain $result;
