@@ -1,5 +1,14 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.71    2013-05-30 reg
+        - Getter and setter methods were not properly accessing the properties
+          of XML::TreePP. XML::TreePP::XMLPath was only accessing them directly
+          through the internally referenced XML::TreePP object's getter and
+          setter. As a result. this feature was removed, and documentation was
+          updated to reflect that the XML::TreePP properties must be set and
+          retrieved through the object's internally referenced XML::TreePP
+          object via XML::TreePP::XMLPath->tpp()->set|get(...) in OO mode.
+
 0.70    2013-04-16 reg
         - Bug fix for the issue where $tpp->parse($x) dies when $x is not
           defined, whereas the code was instead expecting undef to be returned

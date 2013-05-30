@@ -204,9 +204,11 @@ B<Things To Note>
 Note that attributes are specified in the XMLPath as C<@attribute_name>, but
 after C<XML::TreePP::parse()> parses the XML Document, the attribute name is
 identified as C<-attribute_name> in the resulting parsed document.
-As of version 0.52 this can be changed using the C<set(attr_prefix=>'@')>
-method. It should only be changed if the XML Document is provided as already
-parsed, and the attributes are represented with a value other than the default.
+This can be changed in Object Oriented mode using the
+C<$tppx->tpp->set(attr_prefix=>'@')> method to set the attr_prefix attribute in
+the XML::TreePP object referenced internally. It should only be changed if the
+XML Document is provided as already parsed, and the attributes are represented
+with a value other than the default.
 This document uses the default value of C<-> in its examples.
 
 XMLPath requires attributes to be specified as C<@attribute_name> and takes care
@@ -309,7 +311,7 @@ BEGIN {
     $REF_NAME       = "XML::TreePP::XMLPath";  # package name
 
     use vars          qw( $VERSION $TPPKEYS );
-    $VERSION        = '0.70';
+    $VERSION        = '0.71';
     $TPPKEYS        = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 
     use vars          qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
@@ -431,27 +433,22 @@ deleting the property.
 
 =back
 
-    $tppx->set( 'attr_prefix' );  # deletes the property attr_prefix
-    $tppx->set( 'attr_prefix' => '@' );  # sets the value of attr_prefix
+    $tppx->set( 'property_name' );            # deletes the property property_name
+    $tppx->set( 'property_name' => 'val' );   # sets the value of property_name
 
 =back
 
 =cut
 
 sub set(@) {
-    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    my $self    = shift if ref($_[0]) eq $REF_NAME || return undef;
     my %args    = @_;
     while (my ($key,$val) = each %args) {
-        if (($key =~ $TPPKEYS) && (defined $self)) {
-            # define it in XML::TreePP
-            $self->tpp->set( $key => $val );
-        } else {
-            if ( defined $val ) {
-                $self->{$key} = $val;
-            }
-            else {
-                delete $self->{$key};
-            }
+        if ( defined $val ) {
+            $self->{$key} = $val;
+        }
+        else {
+            delete $self->{$key};
         }
     }
 }
@@ -480,22 +477,17 @@ Returns the value of the property requested
 
 =back
 
-    $tppx->get( 'attr_prefix' );
+    $tppx->get( 'property_name' );
 
 =back
 
 =cut
 
 sub get(@) {
-    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    my $self    = shift if ref($_[0]) eq $REF_NAME || return undef;
     my $key     = shift;
-    if (($key =~ $TPPKEYS) && (defined $self)) {
-        # get it from XML::TreePP
-        $self->tpp->get( $key );
-    } else {
-        return $self->{$key} if exists $self->{$key};
-        return undef;
-    }
+    return $self->{$key} if exists $self->{$key};
+    return undef;
 }
 
 
@@ -766,14 +758,14 @@ Being that this is intended to be a submodule of XML::TreePP, the format of
 '@attr' is converted to '-attr' to conform with how XML::TreePP handles
 attributes.
 
-See: XML::TreePP->set( attr_prefix => '@' ); for more information.
-This module supports the default format, '-attr', of attributes. But as of
-version 0.52 this can be changed by setting this modules 'attr_prefix' property
-using the C<set()> method in object oriented programming.
+See: C<XML::TreePP->set( attr_prefix => '@' )> for more information.
+This module supports the default format, '-attr', of attributes. But this can
+be changed by setting the 'attr_prefix' property in the internally referenced
+XML::TreePP object using the C<set()> method in object oriented programming.
 Example:
 
     my $tppx = new XML::TreePP::XMLPath();
-    $tppx->set( attr_prefix => '@' );
+    $tppx->tpp->set( attr_prefix => '@' );
 
 B<XMLPath Filter by index and existence>
 Also, as of version 0.52, there are two additional types of XMLPaths understood.
