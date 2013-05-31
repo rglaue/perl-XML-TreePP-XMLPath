@@ -1,5 +1,15 @@
 Revision history for Perl module XML::TreePP::XMLPath.
 
+0.72    2013-05-31 reg
+        - Fixed documentation that discusses the internal loading and use of
+          an XML::TreePP object. This helps to bring documentation in line
+          with the POD documentation of XML::TreePP::Editor.
+        - The new() method can now accept an argument that allows the caller
+          to provide an XML::TreePP object. This allows one call
+          $tppx = new XML::TreePP::XMLPath( tpp => $tpp_obj );
+          instead of requiring two calls
+          $tppx = new XML::TreePP::XMLPath; $tppx->tpp( $tpp_obj );
+
 0.71    2013-05-30 reg
         - Getter and setter methods were not properly accessing the properties
           of XML::TreePP. XML::TreePP::XMLPath was only accessing them directly

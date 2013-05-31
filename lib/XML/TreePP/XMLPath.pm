@@ -143,6 +143,8 @@ The following methods are removed in the current release.
 
 =head1 XMLPath PHILOSOPHY
 
+=head2 General Illustration of XMLPath
+
 Referring to the following XML Data.
 
     <paragraph>
@@ -199,7 +201,7 @@ After XML::TreePP parses the above XML, it looks like this:
           },
     }
 
-B<Things To Note>
+=head2 Noting Attribute Identification in Parsed XML
 
 Note that attributes are specified in the XMLPath as C<@attribute_name>, but
 after C<XML::TreePP::parse()> parses the XML Document, the attribute name is
@@ -220,6 +222,16 @@ attributes as C<attribute_name>. This is the same format as C<@attribute_name>
 except without the C<@> symbol. Specifying the attribute without an C<@> symbol
 identifies the attribute as a child element of the parent element being
 evaluated.
+
+=head2 Noting Text (CDATA) Identification in Parsed XML
+
+Additionally, the values of child elements are identified in XML parsed by
+C<XML::TreePP::parse()> with the C<#> pound/hash symbol. This can be changed
+via the C<text_node_key> property in the C<XML::TreePP> object referenced by
+C<XML::TreePP::XMLPath->tpp()>. C<XML::TreePP::XMLPath> derives the value to
+use from this.
+
+=head2 Accessing Child Element Values in XMLPath
 
 Child element values are only accessible as C<CDATA>. That is when the
 element being evaluated is C<animal>, the attribute (or child element) is
@@ -268,7 +280,7 @@ following XMLPaths can be used:
 The first path analyzes C<animal>, and the second path analyzes C<cat>. But
 both matches the same node "<cat color='black>tiger</cat>".
 
-B<Matching attributes>
+=head2 Matching Attributes
 
 Prior to version 0.52, attributes could only be used in XMLPath to evaluate
 an element for a result set.
@@ -311,7 +323,7 @@ BEGIN {
     $REF_NAME       = "XML::TreePP::XMLPath";  # package name
 
     use vars          qw( $VERSION $TPPKEYS );
-    $VERSION        = '0.71';
+    $VERSION        = '0.72';
     $TPPKEYS        = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 
     use vars          qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
@@ -331,37 +343,35 @@ BEGIN {
 =over
 
 This module is an extension of the XML::TreePP module. As such, it uses the
-module in many different methods to parse XML Documents, and when the user
-calls the C<set()> and C<get()> methods to set and get properties specific to
-the module.
+module in many different methods to parse XML Documents, and to get the value
+of C<XML::TreePP> properties like C<attr_prefix> and C<text_node_key>.
 
-The XML::TreePP module, however, is only loaded into XML::TreePP::XMLPath when
-it becomes necessary to perform the previously described requests.
+The C<XML::TreePP> module, however, is only loaded into C<XML::TreePP::XMLPath>
+when it becomes necessary to perform the previously described requests. For the
+aformentioned properties C<attr_prefix> and C<text_node_key>, default values
+are used if a C<XML::TreePP> object has not been loaded.
 
-To avoid having this module load the XML::TreePP module, the caller must be
-sure to avoid the following:
-
-1. Do not call the C<set()> and C<get()> methods to set or get properties
-specific to XML::TreePP. Doing so will cause this module to load XML::TreePP in
-order to set or get those properties. In turn, that loaded instance of 
-XML::TreePP is used internally when needed in the future.
-
-2. Do not pass in unparsed XML Documents. The caller would instead want to
-parse the XML Document with C<XML::TreePP::parse()> before passing it in.
+To avoid having this module load the XML::TreePP module,
+do not pass in unparsed XML documents. The caller would instead want to
+parse the XML document with C<XML::TreePP::parse()> before passing it in.
 Passing in an unparsed XML document causes this module to load C<XML::TreePP>
 in order to parse it for processing.
 
-Alternately, If the caller has loaded a copy of XML::TreePP, that instance
-can be assigned to be used by the instance of this module using this method.
-In doing so, when XML::TreePP is needed, the instance provided is used instead
-of loading another copy.
+Alternately, If the caller has loaded a copy of C<XML::TreePP>, that object
+instance can be assigned to be used by the instance of this module using this
+method. In doing so, when XML::TreePP is needed, the instance provided is used
+instead of loading another copy.
 
-Additionally, if this module has loaded an instance of XML::TreePP, this
-instance can be directly accessed or retrieved through this method.
+If this module has loaded an instance of <XML::TreePP>, this instance can be
+directly accessed or retrieved through this method. For example, the
+aformentioned properties can be set.
 
-If you want to only get the internally loaded instance of XML::TreePP, but want
-to not load a new instance and instead have undef returned if an instance is not
-already loaded, then use the C<get()> method.
+    $tppx->tpp->set('attr_prefix','@');  # default is (-) dash
+    $tppx->tpp->set('text_node_key','#');  # default is (#) pound
+
+If you want to only get the internally loaded instance of C<XML::TreePP>, but
+do not want to load a new instance and instead have undef returned if an
+instance is not already loaded, then use the C<get()> method.
 
     my $tppobj = $tppx->get( 'tpp' );
     warn "XML::TreePP is not loaded in XML::TreePP::XMLPath.\n" if !defined $tppobj;
@@ -501,6 +511,11 @@ Create a new object instances of this module.
 
 =over 4
 
+=item * B<tpp>
+
+An instance of XML::TreePP to be used instead of letting this module load its
+own.
+
 =item * I<returns>
 
 An object instance of this module.
@@ -533,6 +548,10 @@ sub new {
     my $pkg	= shift;
     my $class	= ref($pkg) || $pkg;
     my $self	= bless {}, $class;
+
+    my %args    = @_;
+    $self->tpp($args{'tpp'}) if exists $args{'tpp'};
+
     return $self;
 }
 
