@@ -113,6 +113,8 @@ methods can be imported into its space.
 
 =item *     C<parseXMLPath>
 
+=item *     C<assembleXMLPath>
+
 =item *     C<filterXMLDoc>
 
 =item *     C<getValues>
@@ -121,17 +123,15 @@ methods can be imported into its space.
 
 =item *     C<getElements>
 
-=item *     C<getSubtree>
-
 =back
 
 Example:
 
-    use XML::TreePP::XMLPath qw(parseXMLPath filterXMLDoc getValues getAttributes getElements getSubtree);
+    use XML::TreePP::XMLPath qw(parseXMLPath filterXMLDoc getValues getAttributes getElements);
 
-=head1 DEPRECATED METHODS
+=head1 REMOVED METHODS
 
-The following methods are deprecated in the current release.
+The following methods are removed in the current release.
 
 =over 4
 
@@ -142,6 +142,8 @@ The following methods are deprecated in the current release.
 =back
 
 =head1 XMLPath PHILOSOPHY
+
+=head2 General Illustration of XMLPath
 
 Referring to the following XML Data.
 
@@ -199,14 +201,16 @@ After XML::TreePP parses the above XML, it looks like this:
           },
     }
 
-B<Things To Note>
+=head2 Noting Attribute Identification in Parsed XML
 
 Note that attributes are specified in the XMLPath as C<@attribute_name>, but
 after C<XML::TreePP::parse()> parses the XML Document, the attribute name is
 identified as C<-attribute_name> in the resulting parsed document.
-As of version 0.52 this can be changed using the C<set(attr_prefix=>'@')>
-method. It should only be changed if the XML Document is provided as already
-parsed, and the attributes are represented with a value other than the default.
+This can be changed in Object Oriented mode using the
+C<$tppx->tpp->set(attr_prefix=>'@')> method to set the attr_prefix attribute in
+the XML::TreePP object referenced internally. It should only be changed if the
+XML Document is provided as already parsed, and the attributes are represented
+with a value other than the default.
 This document uses the default value of C<-> in its examples.
 
 XMLPath requires attributes to be specified as C<@attribute_name> and takes care
@@ -218,6 +222,16 @@ attributes as C<attribute_name>. This is the same format as C<@attribute_name>
 except without the C<@> symbol. Specifying the attribute without an C<@> symbol
 identifies the attribute as a child element of the parent element being
 evaluated.
+
+=head2 Noting Text (CDATA) Identification in Parsed XML
+
+Additionally, the values of child elements are identified in XML parsed by
+C<XML::TreePP::parse()> with the C<#> pound/hash symbol. This can be changed
+via the C<text_node_key> property in the C<XML::TreePP> object referenced by
+C<XML::TreePP::XMLPath->tpp()>. C<XML::TreePP::XMLPath> derives the value to
+use from this.
+
+=head2 Accessing Child Element Values in XMLPath
 
 Child element values are only accessible as C<CDATA>. That is when the
 element being evaluated is C<animal>, the attribute (or child element) is
@@ -266,7 +280,7 @@ following XMLPaths can be used:
 The first path analyzes C<animal>, and the second path analyzes C<cat>. But
 both matches the same node "<cat color='black>tiger</cat>".
 
-B<Matching attributes>
+=head2 Matching Attributes
 
 Prior to version 0.52, attributes could only be used in XMLPath to evaluate
 an element for a result set.
@@ -297,26 +311,22 @@ use warnings;
 use Exporter;
 use Carp;
 use XML::TreePP;
-#use Data::Dump;
 use Data::Dumper;
-$Data::Dumper::Indent = 0;
-$Data::Dumper::Purity = 1;
-$Data::Dumper::Terse = 1;
 
 BEGIN {
-    use vars      qw(@ISA @EXPORT @EXPORT_OK);
-    @ISA        = qw(Exporter);
-    @EXPORT     = qw();
-    @EXPORT_OK  = qw(&charlexsplit &getAttributes &getElements &getSubtree &parseXMLPath &filterXMLDoc &getValues);
+    use vars          qw(@ISA @EXPORT @EXPORT_OK);
+    @ISA            = qw(Exporter);
+    @EXPORT         = qw();
+    @EXPORT_OK      = qw(&charlexsplit &getAttributes &getElements &getSubtree &parseXMLPath &assembleXMLPath &filterXMLDoc &getValues);
 
-    use vars      qw($REF_NAME);
-    $REF_NAME   = "XML::TreePP::XMLPath";  # package name
+    use vars          qw($REF_NAME);
+    $REF_NAME       = "XML::TreePP::XMLPath";  # package name
 
-    use vars      qw( $VERSION $TPPKEYS );
-    $VERSION    = '0.64';
-    $TPPKEYS    = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
+    use vars          qw( $VERSION $TPPKEYS );
+    $VERSION        = '0.72';
+    $TPPKEYS        = "force_array force_hash cdata_scalar_ref user_agent http_lite lwp_useragent base_class elem_class xml_deref first_out last_out indent xml_decl output_encoding utf8_flag attr_prefix text_node_key ignore_error use_ixhash";
 
-    use vars      qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
+    use vars          qw($DEBUG $DEBUGMETHOD $DEBUGNODE $DEBUGPATH $DEBUGFILTER $DEBUGDUMP);
     $DEBUG          = 0;
     $DEBUGMETHOD    = 1;
     $DEBUGNODE      = 2;
@@ -330,38 +340,38 @@ BEGIN {
 
 =head2 tpp
 
+=over
+
 This module is an extension of the XML::TreePP module. As such, it uses the
-module in many different methods to parse XML Documents, and when the user
-calls the C<set()> and C<get()> methods to set and get properties specific to
-the module.
+module in many different methods to parse XML Documents, and to get the value
+of C<XML::TreePP> properties like C<attr_prefix> and C<text_node_key>.
 
-The XML::TreePP module, however, is only loaded into XML::TreePP::XMLPath when
-it becomes necessary to perform the previously described requests.
+The C<XML::TreePP> module, however, is only loaded into C<XML::TreePP::XMLPath>
+when it becomes necessary to perform the previously described requests. For the
+aformentioned properties C<attr_prefix> and C<text_node_key>, default values
+are used if a C<XML::TreePP> object has not been loaded.
 
-To avoid having this module load the XML::TreePP module, the caller must be
-sure to avoid the following:
-
-1. Do not call the C<set()> and C<get()> methods to set or get properties
-specific to XML::TreePP. Doing so will cause this module to load XML::TreePP in
-order to set or get those properties. In turn, that loaded instance of 
-XML::TreePP is used internally when needed in the future.
-
-2. Do not pass in unparsed XML Documents. The caller would instead want to
-parse the XML Document with C<XML::TreePP::parse()> before passing it in.
+To avoid having this module load the XML::TreePP module,
+do not pass in unparsed XML documents. The caller would instead want to
+parse the XML document with C<XML::TreePP::parse()> before passing it in.
 Passing in an unparsed XML document causes this module to load C<XML::TreePP>
 in order to parse it for processing.
 
-Alternately, If the caller has loaded a copy of XML::TreePP, that instance
-can be assigned to be used by the instance of this module using this method.
-In doing so, when XML::TreePP is needed, the instance provided is used instead
-of loading another copy.
+Alternately, If the caller has loaded a copy of C<XML::TreePP>, that object
+instance can be assigned to be used by the instance of this module using this
+method. In doing so, when XML::TreePP is needed, the instance provided is used
+instead of loading another copy.
 
-Additionally, if this module has loaded an instance of XML::TreePP, this
-instance can be directly accessed or retrieved through this method.
+If this module has loaded an instance of <XML::TreePP>, this instance can be
+directly accessed or retrieved through this method. For example, the
+aformentioned properties can be set.
 
-If you want to only get the internally loaded instance of XML::TreePP, but want
-to not load a new instance and instead have undef returned if an instance is not
-already loaded, then use the C<get()> method.
+    $tppx->tpp->set('attr_prefix','@');  # default is (-) dash
+    $tppx->tpp->set('text_node_key','#');  # default is (#) pound
+
+If you want to only get the internally loaded instance of C<XML::TreePP>, but
+do not want to load a new instance and instead have undef returned if an
+instance is not already loaded, then use the C<get()> method.
 
     my $tppobj = $tppx->get( 'tpp' );
     warn "XML::TreePP is not loaded in XML::TreePP::XMLPath.\n" if !defined $tppobj;
@@ -387,6 +397,8 @@ Or loads a new instance of XML::TreePP and returns it.
     $tppx->tpp( new XML::TreePP );  # Sets the XML::TreePP instance to be used by this object
     $tppx->tpp();  # Retrieve the currently loaded XML::TreePP instance
 
+=back
+
 =cut
 
 sub tpp(@) {
@@ -405,6 +417,8 @@ sub tpp(@) {
 =pod
 
 =head2 set
+
+=over
 
 Set the value for a property in this object instance.
 This method can only be accessed in object oriented style.
@@ -429,25 +443,22 @@ deleting the property.
 
 =back
 
-    $tppx->set( 'attr_prefix' );  # deletes the property attr_prefix
-    $tppx->set( 'attr_prefix' => '@' );  # sets the value of attr_prefix
+    $tppx->set( 'property_name' );            # deletes the property property_name
+    $tppx->set( 'property_name' => 'val' );   # sets the value of property_name
+
+=back
 
 =cut
 
 sub set(@) {
-    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    my $self    = shift if ref($_[0]) eq $REF_NAME || return undef;
     my %args    = @_;
     while (my ($key,$val) = each %args) {
-        if (($key =~ $TPPKEYS) && (defined $self)) {
-            # define it in XML::TreePP
-            $self->tpp->set( $key => $val );
-        } else {
-            if ( defined $val ) {
-                $self->{$key} = $val;
-            }
-            else {
-                delete $self->{$key};
-            }
+        if ( defined $val ) {
+            $self->{$key} = $val;
+        }
+        else {
+            delete $self->{$key};
         }
     }
 }
@@ -456,6 +467,8 @@ sub set(@) {
 =pod
 
 =head2 get
+
+=over
 
 Retrieve the value set for a property in this object instance.
 This method can only be accessed in object oriented style.
@@ -474,20 +487,17 @@ Returns the value of the property requested
 
 =back
 
-    $tppx->get( 'attr_prefix' );
+    $tppx->get( 'property_name' );
+
+=back
 
 =cut
 
 sub get(@) {
-    my $self    = shift if ref($_[0]) eq $REF_NAME || undef;
+    my $self    = shift if ref($_[0]) eq $REF_NAME || return undef;
     my $key     = shift;
-    if (($key =~ $TPPKEYS) && (defined $self)) {
-        # get it from XML::TreePP
-        $self->tpp->get( $key );
-    } else {
-        return $self->{$key} if exists $self->{$key};
-        return undef;
-    }
+    return $self->{$key} if exists $self->{$key};
+    return undef;
 }
 
 
@@ -495,9 +505,16 @@ sub get(@) {
 
 =head2 new
 
+=over
+
 Create a new object instances of this module.
 
 =over 4
+
+=item * B<tpp>
+
+An instance of XML::TreePP to be used instead of letting this module load its
+own.
 
 =item * I<returns>
 
@@ -506,6 +523,8 @@ An object instance of this module.
 =back
 
     $tppx = new XML::TreePP::XMLPath();
+
+=back
 
 =cut
 
@@ -529,6 +548,10 @@ sub new {
     my $pkg	= shift;
     my $class	= ref($pkg) || $pkg;
     my $self	= bless {}, $class;
+
+    my %args    = @_;
+    $self->tpp($args{'tpp'}) if exists $args{'tpp'};
+
     return $self;
 }
 
@@ -536,6 +559,8 @@ sub new {
 =pod
 
 =head2 charlexsplit
+
+=over
 
 An analysis method for single character boundary and start/stop tokens
 
@@ -569,6 +594,19 @@ C<boundry_start> character.
 Provide "1" if the ending of the string should be treated as a C<boundry_stop>
 character.
 
+=item * B<escape_char>
+
+The character that indicates the next character in the string is to be escaped.
+The default value is the backward slash (\). And example is used in the
+following string:
+
+    'The Cat\'s Meow'
+
+Without a recognized escape character, the previous string would fail to be
+recognized properly.
+
+This optional parameter was introduced in version 0.70. 
+
 =item * I<returns>
 
 An array reference of elements
@@ -581,6 +619,8 @@ An array reference of elements
                         tokens         => \@tokens,
                         boundry_begin  => $char1,   boundry_end    => $char2 );
 
+=back
+
 =cut
 
 # charlexsplit
@@ -591,6 +631,7 @@ An array reference of elements
 # @param    tokens          a { start_char => stop_char } hash reference of start/stop tokens
 # @param    boundry_begin   set to "1" if the beginning of the string should be treated as a 'boundry_start' character
 # @param    boundry_end     set to "1" if the ending of the string should be treated as a 'boundry_stop' character
+# @param    escape_char     the character that indicates the next character in the string is to be escaped. default is '\'
 # @return   an array reference of the resulting parsed elements
 #
 # Example:
@@ -644,6 +685,7 @@ sub charlexsplit (@) {
     my %tokens          = @{$args{'tokens'}};     # The start=>stop characters that must be paired inside an element
     my $boundry_begin   = $args{'boundry_begin'} || 0;
     my $boundry_end     = $args{'boundry_end'} || 0;
+    my $escape_char     = $args{'escape_char'} || "\\";
 
 
     # split the string into individual characters
@@ -654,11 +696,22 @@ sub charlexsplit (@) {
     my $current_element = undef;
     my @elements;
     my $collect = 0;
+    my $escape_char_flag = 0;
 
     if ($boundry_begin == 1) {
         $collect = 1;
     }
     CHAR: foreach my $c (@string) {
+        if ($c eq $escape_char) {
+            $current_element .= $c;
+            $escape_char_flag = 1;
+            next CHAR;
+        }
+        if ($escape_char_flag) {
+            $current_element .= $c;
+            $escape_char_flag = 0;
+            next CHAR;
+        }
         if (!defined $next) {       # If not looking for the 'stop' matching token
             if ($c eq $boundry_stop) {                  # If this character matches the boundry_stop character...
                 if (defined $current_element) {         # -and the current_element is defined...
@@ -711,6 +764,8 @@ sub charlexsplit (@) {
 
 =head2 parseXMLPath
 
+=over
+
 Parse a string that represents the XMLPath to a XML element or attribute in a
 XML::TreePP parsed XML Document.
 
@@ -722,14 +777,14 @@ Being that this is intended to be a submodule of XML::TreePP, the format of
 '@attr' is converted to '-attr' to conform with how XML::TreePP handles
 attributes.
 
-See: XML::TreePP->set( attr_prefix => '@' ); for more information.
-This module supports the default format, '-attr', of attributes. But as of
-version 0.52 this can be changed by setting this modules 'attr_prefix' property
-using the C<set()> method in object oriented programming.
+See: C<XML::TreePP->set( attr_prefix => '@' )> for more information.
+This module supports the default format, '-attr', of attributes. But this can
+be changed by setting the 'attr_prefix' property in the internally referenced
+XML::TreePP object using the C<set()> method in object oriented programming.
 Example:
 
     my $tppx = new XML::TreePP::XMLPath();
-    $tppx->set( attr_prefix => '@' );
+    $tppx->tpp->set( attr_prefix => '@' );
 
 B<XMLPath Filter by index and existence>
 Also, as of version 0.52, there are two additional types of XMLPaths understood.
@@ -763,6 +818,8 @@ An array reference of array referenced elements of the XMLPath.
 =back
 
     $parsedXMLPath = parseXMLPath( $XMLPath );
+
+=back
 
 =cut
 
@@ -888,10 +945,176 @@ sub parseXMLPath ($) {
     return $hpath;
 }
 
+=pod
+
+=head2 assembleXMLPath
+
+=over
+
+Assemble an ARRAY or HASH ref structure representing an XMLPath. This method
+can be used to construct an XMLPath array ref that has been parsed by the
+parseXMLPath method.
+
+Note that the XML attributes can be identified as "-attribute" or "@attribute".
+When identified as "-attribute', they are transformed into "@attribute" upon
+assembly. The preceding minus (-) in place of the at (@) is the recognized
+format of attributes in the C<XML::TreePP> module, though can be changed. See
+the C<parseXMLPath> method for further information.
+
+This method was added in version 0.70.
+
+
+=over 4
+
+=item * B<parsed-XMLPath>
+
+The XML path to be assembled, represented as either an ARRAY or HASH reference.
+
+=item * I<returns>
+
+An XMLPath.
+
+=back
+
+    $XMLPath = assembleXMLPath( $parsedXMLPath );
+
+or
+
+    my $xmlpath = q{/books/book[5]/cats[@author="The Cat's Meow"]/tigers[meateater]};
+    
+    my $ppath = $tppx->parseXMLPath($xpath);
+    ## $ppath == [['books',undef],['book',[['5',undef]]],['cats',[['-author','The Cat\'s Meow']]],['tigers',[['meateater',undef]]]]
+
+    my $apath = [ 'books', ['book', 5], ['cats',[['@author' => "The Cat's Meow"]]], ['tigers',['meateater']] ];
+    my $hpath = { books => { book => { -attrs => [5], cats => { -attrs => [['-author' => "The Cat's Meow"]], tigers => { -attrs => ["meateater"] } } } } };
+    
+    print "original: ",$xmlpath,"\n";
+    print "      re: ",$tppx->assembleXMLPath($ppath),"\n";
+    print "   array: ",$tppx->assembleXMLPath($apath),"\n";
+    print "    hash: ",$tppx->assembleXMLPath($hpath),"\n";
+
+output
+
+    original: /books/book[5]/cats[@author="The Cat's Meow"]/tigers[meateater]
+          re: /books/book[5]/cats[@author="The Cat's Meow"]/tigers[meateater]
+       array: /books/book[5]/cats[@author="The Cat's Meow"]/tigers[meateater]
+        hash: /books/book[5]/cats[@author="The Cat's Meow"]/tigers[meateater]
+
+=back
+
+=cut
+
+sub assembleXMLPath ($) {
+    my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
+    unless (@_ == 1) { carp 'method assembleXMLPath($) requires one argument.'; return undef; }
+    my $ref_path    = shift;
+    my $path        = undef;
+    my ($tpp,$xml_text_id,$xml_attr_id);
+
+    if ((defined $self) && (defined $self->get('tpp'))) {
+        $tpp         = $self ? $self->tpp() : tpp();
+        $xml_text_id = $tpp->get( 'text_node_key' ) || '#text';
+        $xml_attr_id = $tpp->get( 'attr_prefix' )   || '-';
+    } else {
+        $xml_text_id = '#text';
+        $xml_attr_id = '-';
+    }
+
+    my $assemble_attributes = sub ($) {
+        my $attrs = shift || return undef;
+        if ((defined $attrs) && (! ref $attrs)) {
+            return ('['.$attrs.']');
+        }
+        elsif (ref $attrs eq "SCALAR") {
+            return ('['.${$attrs}.']');
+        }
+        return undef unless ref $attrs eq "ARRAY";
+        my $path;
+        foreach my $itemattr (@{$attrs}) {
+            my ($key,$val);
+            if (ref $itemattr eq "ARRAY") {
+                ($key,$val) = @{$itemattr};
+            }
+            else {
+                $key = $itemattr;
+            }
+            next unless defined $key;
+            
+            if (($key =~ /^\d+$/) && (! defined $val)) {
+                $path .= ('['.$key.']');
+            }
+            elsif (($key =~ /^\-(.*)/) || ($key =~ /^\@(.*)/)) {
+                my $keystring = $1;
+                if (defined $val) {
+                    $val =~ s/\"/\\\"/g;
+                    $path .= ('[@'.$keystring.'="'.$val.'"]');
+                }
+                else {
+                    $path .= ('[@'.$keystring.']');
+                }
+            }
+            else {
+                if (defined $val) {
+                    $val =~ s/\"/\\\"/g;
+                    $path .= ('['.$key.'="'.$val.'"]');
+                }
+                else {
+                    $path .= ('['.$key.']');
+                }
+            }
+        }
+        return $path;
+    };
+
+    # Reassemble a path parsed by parseXMLPath()
+    if (ref $ref_path eq "ARRAY") {
+        foreach my $pathitem (@{$ref_path}) {
+            $path .= "/";
+            my ($param,$attrs);
+            if (ref $pathitem eq "ARRAY") {
+                ($param,$attrs) = @{$pathitem};
+            }
+            else {
+                $param = $pathitem;
+            }
+            $path .= $param;
+            if (my $param_attrs = $assemble_attributes->($attrs)) {
+                $path .= $param_attrs;
+            }
+        }
+    }
+    # Assemble a path represented by a hash
+    elsif (ref $ref_path eq "HASH") {
+        my $recurse = sub ($) {};
+        $recurse = sub ($) {
+            my $this_path = shift;
+            my $path;
+            foreach my $pathitem (keys %{$this_path}) {
+                next if $pathitem eq "-attrs";
+                $path .= "/";
+                $path .= $pathitem;
+                my $attrs = $this_path->{$pathitem}->{'-attrs'};
+                if (my $pathitem_attrs = $assemble_attributes->($attrs)) {
+                    $path .= $pathitem_attrs;
+                }
+                if (my $recursed_path = $recurse->($this_path->{$pathitem})) {
+                    $path .= $recursed_path;
+                }
+                last;
+            }
+            return $path;
+        };
+        $path = $recurse->($ref_path);
+    }
+
+    return $path;
+}
 
 =pod
 
 =head2 filterXMLDoc
+
+=over
 
 To filter down to a subtree or set of subtrees of an XML document based on a
 given XMLPath
@@ -1009,6 +1232,8 @@ You can retrieve the result set in one of two formats.
     my $result = filterXMLDoc( $XMLDocument , $XMLPath );
     my @result = filterXMLDoc( $XMLDocument , $XMLPath );
 
+=back
+
 =cut
 
 sub filterXMLDoc (@) {
@@ -1020,6 +1245,10 @@ sub filterXMLDoc (@) {
                           # structure => TargetRaw | RootMAP | ParentMAP
     my $o_structure = $options{'structure'} ? $options{'structure'} : "TargetRaw";
     my ($tpp,$xtree,$xpath,$xml_text_id,$xml_attr_id);
+
+    local $Data::Dumper::Indent = 0;
+    local $Data::Dumper::Purity = 1;
+    local $Data::Dumper::Terse = 1;
 
     if ((defined $self) && (defined $self->get('tpp'))) {
         $tpp         = $self ? $self->tpp() : tpp();
@@ -1650,6 +1879,8 @@ sub filterXMLDoc (@) {
 
 =head2 getValues
 
+=over
+
 Retrieve the values found in the given XML Document at the given XMLPath.
 
 This method was added in version 0.53 as getValue, and changed to getValues in 0.54
@@ -1699,6 +1930,8 @@ Returns the values from the XML Document found at the XMLPath.
     # and trim off the white space at the beginning and end of each value
     $vals = $tppx->getValues( $xmldoc, '/books/book[3]/excerpt', valstring => 1, valxml => 1, valtrim => 1 );
 
+=back
+
 =cut
 
 sub getValues (@) {
@@ -1706,6 +1939,11 @@ sub getValues (@) {
     unless (@_ >= 2) { carp 'method getValues(@) requires at least two arguments.'; return undef; }
     my $tree        = shift;
     my $path        = shift;
+
+    local $Data::Dumper::Indent = 0;
+    local $Data::Dumper::Purity = 1;
+    local $Data::Dumper::Terse = 1;
+
     # Supported arguments:
     # valstring = 1|0    ; default = 1; 1 = return values that are strings
     # valxml = 1|0       ; default = 0; 1 = return values that are xml, as raw xml
@@ -1814,268 +2052,39 @@ sub getValues (@) {
     return wantarray ? @{$found} : $found;
 }
 
-
-=pod
-
-=head2 validateAttrValue
-
-As of version 0.52, this method is deprecated. The method C<filterXMLDoc()>
-should be used instead. See this method's implementation illustration for the
-alternate example using C<filterXMLDoc()>.
-
-Validate a subtree of a parsed XML document to have a parameter set in which
-an attribute matches a value.
-
-=over 4
-
-=item * B<XMLSubTree>
-
-The XML tree, or subtree, (element) to validate.
-This is an XML document parsed by the XML::TreePP->parse() method.
-
-The XMLSubTree can be an ARRAY of multiple elements to evaluate.
-The XMLSubTree would be validated as follows:
-
-    $subtree[item]->{'attribute'} eq "value"
-    $subtree[item]->{'attribute'}->{'value'} exists
-    returning: $subtree[item] if valid (returns the first valid [item])
-
-Or the XMLSubTree can be a HASH which would be a single element to evaluate.
-The XMLSubTree would be validated as follows:
-
-    $subtree{'attribute'} eq "value"
-    $subtree{'attribute'}->{'value'} exists
-    returning: $subtree if valid
-
-=item * B<params>
-
-Validate the element having an attribute matching value in this current
-XMLSubTree position
-
-This is an array reference of C<[["attr1","val"],["attr2","val"]]>, as in:
-
-    my $params = [[ "MyKeyName" , "Value_to_match_for_KeyName" ]];
-
-As of XMLPath version 0.52, one can define an element or attribute existence
-test with the parsed results from the C<parseXMLPath()> method. This feature
-was already available in this method before 0.52, but C<parseXMLPath()> did
-not provide it from the results of parsing a XMLPath until version 0.52.
-The result of parsing this with C<parseXMLPath()> for use by this method is as
-follows:
-
-    my $params = [[ "-id", undef ]];  # Test for existence of the attribute "id"
-                                      # as in this path: /books/book[@id]
-
-=item * I<returns>
-
-The subtree that is validated, or undef if not validated
-
-=back
-
-    my @params = ( [ "element", "value" ], [ "-attribute", "value" ] );
-    $validatedXMLTree = validateAttrValue( $XMLTree , \@params );
-
-    # Alternately, you can do the same using the filterXMLDoc() method using
-    # the single period (.) which identifies the immediate root of the
-    # XML Document (or a XML Document node you provide instead).
-    # If $XMLTree can be either plain text or a XML::TreePP parsed XML Document
-    my $result = filterXMLDoc( $XMLTree, '.[element="value"][@attribute="value"]' );
-    my $result = filterXMLDoc( $XMLTree, [ ".", \@params ] );
-
-=cut
-
 # validateAttrValue
-# @param    xmlsubtree  the XML sub tree (element) to validate
-# @param    [params]    validate the element having this [attribute=value] in this current sub tree position
-# @return   the subtree that is validated, or undef if not validated
-#
-# subtree can be an ARRAY of multiple elements to evaluate, or a HASH which
-# would be a single element to evaluate, and the subtree can be validated
-# as follows:
-# $subtree[item]->{'attribute'} eq "value"
-# $subtree[item]->{'attribute'}->{'value'} exists
-# returning: $subtree[item] if valid (returns the first valid [item])
-# $subtree{'attribute'} eq "value"
-# $subtree{'attribute'}->{'value'} exists
-# returning: $subtree if valid
-#
-# In the first case with an ARRAY Reference, the first item in the array
-# that can be validated is what is returned. If you want all items in the
-# array that are valid, you will need to pass each item in to this function
-# individually for validating.
-#
-sub validateAttrValue ($$);
+# Wrapper around filterXMLDoc for backwards compatibility only.
 sub validateAttrValue ($$) {
+    carp 'Method validateAttrValue($$) is deprecated, use filterXMLDoc() instead.';
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     unless (@_ == 2) { carp 'method validateAttrValue($$) requires two arguments.'; return undef; }
     my $subtree     = shift;
     my $params      = shift;
-    if (ref $subtree eq "ARRAY") {
-        foreach my $sub (@{$subtree}) {
-            my $subtree_tmp = validateAttrValue($sub,$params);
-            return $subtree_tmp if defined $subtree_tmp;
-        }
-        return undef;
-    } elsif (ref $subtree eq "HASH") {
-        my $param_match_flag = 0;
-        PARAM: foreach my $param (@{$params}) {
-            #my $attribute   = shift @{$param};
-            #my $value       = shift @{$param};
-            my $attribute   = $param->[0];
-            my $value       = $param->[1];
-            if (! exists $subtree->{$attribute}) {
-                $param_match_flag = 0;
-                last PARAM;
-            }
-            if      (   (ref    $subtree->{$attribute} eq "SCALAR" )
-                     && (defined                $value             )
-                     && (    ${$subtree->{$attribute}} eq $value   ) ) {
-                # If SCALAR, val is defined, and attr=val
-                $param_match_flag = 1;
-                next PARAM;
-            } elsif (   (ref    $subtree->{$attribute} eq "SCALAR" )
-                     && (! defined              $value             )
-                     && (! defined ${$subtree->{$attribute}}       ) ) {
-                # If SCALAR, val is NOT defined, and ref(attr) is undef
-                $param_match_flag = 1;
-                next PARAM;
-            } elsif (   (ref    $subtree->{$attribute} eq "SCALAR" )
-                     && (                       $value eq ''       )
-                     && (    ${$subtree->{$attribute}} eq ''       ) ) {
-                # If SCALAR, val is defined as empty string, and attr=val
-                $param_match_flag = 1;
-                next PARAM;
-            } elsif (   (ref    $subtree->{$attribute} eq "HASH"   )
-                     && (! defined              $value             ) ) {
-                # If HASH, val is NOT defined -> existence test
-                $param_match_flag = 1;
-                next PARAM;
-            } elsif (   (ref    $subtree->{$attribute} eq "HASH"   )
-                     && (defined                $value             )
-                     && (exists $subtree->{$attribute}->{$value}   ) ) {
-                # If HASH, val is defined, and val exists as a hash key
-                $param_match_flag = 1;
-                next PARAM;
-            } elsif (    ref    $subtree->{$attribute} eq "ARRAY"  )   {
-                # we are looking at a ARRAY value
-                foreach my $a_subtree (@{$subtree->{$attribute}}) {
-                    if      (   (! defined     $value          )
-                             && (! defined $a_subtree          )) {
-                        $param_match_flag = 1;
-                        next PARAM;
-                    } elsif (   (  defined     $value          )
-                             && (              $value eq ''    )
-                             && (  defined $a_subtree          )
-                             && (          $a_subtree eq ''    )) {
-                        $param_match_flag = 1;
-                        next PARAM;
-                    } elsif (   (  defined     $value          )
-                             && (  defined $a_subtree          )
-                             && (          $a_subtree eq $value)) {
-                        $param_match_flag = 1;
-                        next PARAM;
-                    }
-                }
-                $param_match_flag = 0;
-                last PARAM;
-            } else {
-                # we are looking at a string value
-                if      (   (! defined $value                      )
-                         && (! defined $subtree->{$attribute}      )) {
-                    $param_match_flag = 1;
-                } elsif     (! defined $value                      )  {
-                    $param_match_flag = 1;
-                } elsif (   (  defined                 $value      )
-                         && (                          $value eq '')
-                         && (  defined $subtree->{$attribute}      )
-                         && (          $subtree->{$attribute} eq '')) {
-                    $param_match_flag = 1;
-                } elsif ($subtree->{$attribute} eq $value) {
-                    $param_match_flag = 1;
-                } else {
-                    $param_match_flag = 0;
-                    last PARAM;
-                }
-                next PARAM;
-            }
-        }
-        if ($param_match_flag == 1) {
-            return $subtree;
-        } else {
-            return undef;
-        }
+
+    if ($self) {
+        return $self->filterXMLDoc( $subtree , [ "." , $params ]);
     }
-    return undef;
+    else {
+        return filterXMLDoc( $subtree , [ "." , $params ]);
+    }
 }
 
-
-=pod
-
-=head2 getSubtree
-
-As of version 0.52, this method is deprecated. The function C<filterXMLDoc()>
-should be used instead. See this method's implementation illustration for the
-alternate example using C<filterXMLDoc()>.
-
-Starting in version 0.52, this method still returns the
-same single value as it did in version 0.51, but with additional filtering
-capabilities provided to it by C<filterXMLDoc()> . Also starting in version
-0.52 this method can additionally return an array of values resulting from the
-match. See I<returns> below.
-
-Return a subtree of an XML tree from a given XMLPath.
-See C<parseXMLPath()> for the format of a XMLPath.
-This function returns the first subtree or an array of subtrees in the given
-XML tree found to match the given XMLPath.
-
-If you want to retrieve all subtrees in the given XML tree which match the given
-XML path, you should ideally use the C<filterXMLDoc()> function.
-
-This method actually executes C<filterXMLDoc()> and returns the first result
-set, or more precisely the first matching node and its subtree in the XML Doc.
-If the context of the caller is requesting a list or array, then all matching
-nodes and their subtrees will be returned to the caller as a list (array).
-
-=over 4
-
-=item * B<XMLTree>
-
-An XML::TreePP parsed XML document.
-
-=item * B<XMLPath>
-
-The path within the XML Tree to retrieve. See parseXMLPath()
-
-=item * I<returns>
-
-A subtree of a XML::TreePP parsed XMLTree found at the XMLPath and the caller
-is not requesting an array, otherwise a list of subtrees are returned.
-Depending on the XMLPath given, the returning value(s) could actually be string
-values and not referenced subtree nodes.
-
-=back
-
-    $XMLSubTree = getSubtree ( $XMLTree , $XMLPath );
-    @XMLSubTrees = getSubtree ( $XMLTree , $XMLPath );
-
-    # Alternately, you can do the same using the filterXMLDoc() method.
-    my $result = filterXMLDoc( $XMLTree, $XMLPath );
-    my @result = filterXMLDoc( $XMLTree, $XMLPath );
-
-=cut
-
 # getSubtree
-# @brief  return a subtree of an XML tree from a given path (see parseXMLPath)
-# @param    xmltree     the XML tree
-# @param    xmlpath     the path within the XML Tree to retrieve (see parseXMLPath)
-# @return   a subtree of the XMLTree from the given XMLPath
+# Wrapper around filterXMLDoc for backwards compatibility only.
 sub getSubtree ($$) {
+    carp 'Method getSubtree($$) is deprecated, use filterXMLDoc() instead.';
     my $self        = shift if ref($_[0]) eq $REF_NAME || undef;
     unless (@_ == 2) { carp 'method getSubtree($$) requires two arguments.'; return undef; }
     my $tree        = shift;
     my $path        = shift;
+    my $result;
 
-    my $result = filterXMLDoc($tree,$path);
+    if ($self) {
+        $result = $self->filterXMLDoc($tree,$path);
+    }
+    else {
+        $result = filterXMLDoc($tree,$path);
+    }
     return undef unless defined $result;
     return wantarray ? @{$result} : $result->[0];
 }
@@ -2083,6 +2092,10 @@ sub getSubtree ($$) {
 =pod
 
 =head2 getAttributes
+
+=over
+
+Retrieve the attributes found in the given XML Document at the given XMLPath.
 
 =over 4
 
@@ -2112,6 +2125,8 @@ Example Returned Data:
 =back
 
     $attributes = getAttributes ( $XMLTree , $XMLPath );
+
+=back
 
 =cut
 
@@ -2178,6 +2193,8 @@ sub getAttributes (@) {
 
 =head2 getElements
 
+=over
+
 Gets the child elements found at a specified XMLPath
 
 =over 4
@@ -2214,6 +2231,8 @@ If the XMLPath has no elements under it, then undef is returned instead.
 =back
 
     $elements = getElements ( $XMLTree , $XMLPath );
+
+=back
 
 =cut
 
@@ -2580,175 +2599,6 @@ Output:
       words => "Do red cats eat yellow food",
     }
 
-=head2 Method: validateAttrValue
-
-    #!/usr/bin/perl
-    use XML::TreePP;
-    use XML::TreePP::XMLPath qw(getSubtree validateAttrValue);
-    use Data::Dumper;
-    #
-    # The XML document data
-    my $xmldata=<<XMLEND;
-        <paragraph>
-            <sentence language="english">
-                <words>Do red cats eat yellow food</words>
-                <punctuation>?</punctuation>
-            </sentence>
-            <sentence language="english">
-                <words>Brown cows eat green grass</words>
-                <punctuation>.</punctuation>
-            </sentence>
-        </paragraph>
-    XMLEND
-    #
-    # Parse the XML document.
-    my $tpp = new XML::TreePP;
-    my $xmldoc = $tpp->parse($xmldata);
-    print "Output Test #1\n";
-    print Dumper( $xmldoc );
-    #
-    # Retrieve the sub tree of the XML document at path "paragraph/sentence"
-    my $xmlSubTree = getSubtree($xmldoc, "paragraph/sentence");
-    print "Output Test #2\n";
-    print Dumper( $xmlSubTree );
-    #
-    my (@params, $validatedSubTree);
-    #
-    # Test the XML Sub Tree to have an attribute "-language" with value "german"
-    @params = (['-language', 'german']);
-    $validatedSubTree = validateAttrValue($xmlSubTree, \@params);
-    print "Output Test #3\n";
-    print Dumper( $validatedSubTree );
-    #
-    # Test the XML Sub Tree to have an attribute "-language" with value "english"
-    @params = (['-language', 'english']);
-    $validatedSubTree = validateAttrValue($xmlSubTree, \@params);
-    print "Output Test #4\n";
-    print Dumper( $validatedSubTree );
-
-Output:
-
-    Output Test #1
-    {
-      paragraph => {
-            sentence => [
-                  {
-                    "-language" => "english",
-                    punctuation => "?",
-                    words => "Do red cats eat yellow food",
-                  },
-                  {
-                    "-language" => "english",
-                    punctuation => ".",
-                    words => "Brown cows eat green grass",
-                  },
-                ],
-          },
-    }
-    Output Test #2
-    [
-      {
-        "-language" => "english",
-        punctuation => "?",
-        words => "Do red cats eat yellow food",
-      },
-      {
-        "-language" => "english",
-        punctuation => ".",
-        words => "Brown cows eat green grass",
-      },
-    ]
-    Output Test #3
-    undef
-    Output Test #4
-    {
-      "-language" => "english",
-      punctuation => "?",
-      words => "Do red cats eat yellow food",
-    }
-
-=head2 Method: getSubtree
-
-    #!/usr/bin/perl
-    use XML::TreePP;
-    use XML::TreePP::XMLPath qw(getSubtree);
-    use Data::Dumper;
-    #
-    # The XML document data
-    my $xmldata=<<XMLEND;
-        <level1>
-            <level2>
-                <level3 attr1="val1" attr2="val2">
-                    <attr3>val3</attr3>
-                    <attr4/>
-                    <attrX>one</attrX>
-                    <attrX>two</attrX>
-                    <attrX>three</attrX>
-                </level3>
-                <level3 attr1="valOne"/>
-            </level2>
-        </level1>
-    XMLEND
-    #
-    # Parse the XML document.
-    my $tpp = new XML::TreePP;
-    my $xmldoc = $tpp->parse($xmldata);
-    print "Output Test #1\n";
-    print Dumper( $xmldoc );
-    #
-    # Retrieve the sub tree of the XML document at path "level1/level2"
-    my $xmlSubTree = getSubtree($xmldoc, 'level1/level2');
-    print "Output Test #2\n";
-    print Dumper( $xmlSubTree );
-    #
-    # Retrieve the sub tree of the XML document at path "level1/level2/level3[@attr1='val1']"
-    my $xmlSubTree = getSubtree($xmldoc, 'level1/level2/level3[@attr1="val1"]');
-    print "Output Test #3\n";
-    print Dumper( $xmlSubTree );
-
-Output:
-
-    Output Test #1
-    {
-      level1 => {
-            level2 => {
-                  level3 => [
-                        {
-                          "-attr1" => "val1",
-                          "-attr2" => "val2",
-                          attr3    => "val3",
-                          attr4    => undef,
-                          attrX    => ["one", "two", "three"],
-                        },
-                        { "-attr1" => "valOne" },
-                      ],
-                },
-          },
-    }
-    Output Test #2
-    {
-      level3 => [
-            {
-              "-attr1" => "val1",
-              "-attr2" => "val2",
-              attr3    => "val3",
-              attr4    => undef,
-              attrX    => ["one", "two", "three"],
-            },
-            { "-attr1" => "valOne" },
-          ],
-    }
-    Output Test #3
-    {
-      "-attr1" => "val1",
-      "-attr2" => "val2",
-      attr3    => "val3",
-      attr4    => undef,
-      attrX    => ["one", "two", "three"],
-    }
-
-See validateAttrValue() EXAMPLES section for more usage examples.
-
 =head2 Method: getAttributes
 
     #!/usr/bin/perl
@@ -2894,7 +2744,9 @@ XML::TreePP::XMLPath on Codepin: http://www.codepin.org/project/perlmod/XML-Tree
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2008-2011 Russell E Glaue, Center for the Application of Information Technologies.
+Copyright (c) 2008-2013 Russell E Glaue,
+Center for the Application of Information Technologies,
+Western Illinois University.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it under
